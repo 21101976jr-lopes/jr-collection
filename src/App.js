@@ -414,8 +414,8 @@ export default function App() {
         <div style={S.logoRow}>
           <VinylSVG size={42} spin={query.length > 0} />
           <div>
-            <div style={S.appName}>Jr Collection</div>
-            <h1 style={S.appTitle}>Vitrola</h1>
+            <h1 style={{ ...S.appTitle, fontSize: 28, letterSpacing: 3, marginBottom: 2 }}>Jr Collection</h1>
+            <div style={{ fontSize: 10, color: "#c0392b", fontFamily: "monospace", letterSpacing: 3, textTransform: "uppercase", marginBottom: 3 }}>Discos-LP</div>
             <div style={S.appSub}>{records.length} disco{records.length !== 1 ? "s" : ""} no catálogo</div>
           </div>
         </div>
