@@ -122,9 +122,15 @@ function ScanOverlay({ onClose, onDetected }) {
     setPhase("analyzing");
     try {
       const b64 = preview.split(",")[1];
+      const apiKey = process.env.REACT_APP_ANTHROPIC_KEY;
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-calls": "true",
+        },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 1000,
@@ -156,7 +162,7 @@ Se não conseguir identificar, retorne: {"error":"não identificado"}` }
     hint: { fontSize: 12, fontFamily: "monospace", color: "#555", textAlign: "center" },
     videoBox: { position: "relative", width: "100%", maxWidth: 460 },
     video: { width: "100%", borderRadius: 8, border: "2px solid #1e1e1e", background: "#111", display: "block" },
-    snapBtn: { width: 66, height: 66, borderRadius: "50%", background: "#fff", border: "5px solid #c0392b", cursor: "pointer" },
+    snapBtn: { width: 72, height: 72, minWidth: 72, minHeight: 72, borderRadius: "50%", background: "#c0392b", border: "4px solid #fff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 },
     previewImg: { width: "100%", maxWidth: 360, borderRadius: 8, border: "2px solid #1e1e1e" },
     btn: (p) => ({ background: p ? "#c0392b" : "transparent", border: `1px solid ${p ? "#c0392b" : "#333"}`, color: p ? "#fff" : "#888", borderRadius: 4, padding: "10px 26px", cursor: "pointer", fontSize: 13, fontFamily: "monospace", letterSpacing: 1 }),
     spinner: { width: 44, height: 44, borderRadius: "50%", border: "3px solid #1e1e1e", borderTop: "3px solid #c0392b", animation: "spin 0.8s linear infinite" },
@@ -192,7 +198,7 @@ Se não conseguir identificar, retorne: {"error":"não identificado"}` }
             <Corner style={{ bottom: 8, right: 8, borderBottom: redBorder, borderRight: redBorder }} />
           </div>
           <canvas ref={canvasRef} style={{ display: "none" }} />
-          <button style={O.snapBtn} onClick={snap} title="Fotografar" />
+          <button style={O.snapBtn} onClick={snap} title="Fotografar">📷</button>
           <button style={{ ...O.btn(false), fontSize: 11 }} onClick={() => fileRef.current.click()}>📁 Usar foto da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
         </>)}
