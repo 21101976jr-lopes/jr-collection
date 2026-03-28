@@ -122,32 +122,12 @@ function ScanOverlay({ onClose, onDetected }) {
     setPhase("analyzing");
     try {
       const b64 = preview.split(",")[1];
-      const apiKey = process.env.REACT_APP_ANTHROPIC_KEY;
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch("/api/scan", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-calls": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-              { type: "text", text: `Você está vendo a capa de um disco de vinil (LP). Identifique o álbum e retorne SOMENTE um objeto JSON válido, sem markdown, sem explicação. Formato exato:
-{"artist":"Nome do artista","album":"Nome do álbum","year":1979,"genre":"Gênero","label":"Gravadora","tracks":["Faixa 1","Faixa 2"],"confidence":"high|medium|low"}
-Se não conseguir identificar, retorne: {"error":"não identificado"}` }
-            ]
-          }]
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: b64 })
       });
-      const data = await res.json();
-      const raw = data.content?.map(b => b.text || "").join("").trim();
-      const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      const parsed = await res.json();
       if (parsed.error) { setErrMsg("Não consegui identificar. Tente uma foto mais nítida da capa."); setPhase("error"); }
       else { setResult(parsed); setPhase("result"); }
     } catch { setErrMsg("Erro ao analisar. Verifique sua conexão e tente novamente."); setPhase("error"); }
