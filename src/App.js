@@ -242,10 +242,14 @@ function ScanOverlay({ onClose, onDetected }) {
             </div>
           )}
 
-          <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center" }}>
-            <button style={btn(false)} onClick={() => setPhase("manual")}>✏️ Buscar outro nome</button>
-            <button style={btn(true)} onClick={() => onDetected(result)}>+ Adicionar ao catálogo</button>
+          <div style={{ width:"100%", maxWidth:460, background:"#1a0a0a", border:"1px solid #c0392b33", borderRadius:8, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+            <span style={{ fontSize:13, fontFamily:"monospace", color:"#888" }}>Disco errado?</span>
+            <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              onClick={() => { setPhase("manual"); setManualQuery(""); }}>
+              ✏️ Corrigir — buscar pelo nome
+            </button>
           </div>
+          <button style={btn(true)} onClick={() => onDetected(result)}>+ Adicionar ao catálogo</button>
         </>)}
 
         {/* Manual search */}
@@ -288,13 +292,106 @@ const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color:
 
 function RecordForm({ initial, onSave, onCancel, title }) {
   const [form, setForm] = useState(initial);
+  const [discogsQuery, setDiscogsQuery] = useState("");
+  const [discogsResults, setDiscogsResults] = useState([]);
+  const [discogsLoading, setDiscogsLoading] = useState(false);
+  const [showDiscogs, setShowDiscogs] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const searchDiscogs = async () => {
+    if (!discogsQuery.trim()) return;
+    setDiscogsLoading(true);
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manualQuery: discogsQuery.trim() })
+      });
+      const data = await res.json();
+      if (!data.error) {
+        // Fill form with Discogs data
+        setForm(p => ({
+          ...p,
+          artist: data.artist || p.artist,
+          album: data.album || p.album,
+          year: String(data.year || p.year),
+          genre: data.genre || p.genre,
+          label: data.label || p.label,
+          tracks: Array.isArray(data.tracks) ? data.tracks.join("\n") : (data.tracks || p.tracks),
+          coverPhoto: data.coverUrl || p.coverPhoto,
+        }));
+        setDiscogsResults(data.discogsResults || []);
+        setShowDiscogs(false);
+      }
+    } catch {}
+    setDiscogsLoading(false);
+  };
 
   return (
     <div style={{ padding: 18, maxWidth: 480 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ fontWeight: "normal", letterSpacing: 2, fontSize: 18, textTransform: "uppercase", margin: 0 }}>{title}</h2>
         <button style={{ background: "transparent", border: "1px solid #333", color: "#777", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" }} onClick={onCancel}>✕ Cancelar</button>
+      </div>
+
+      {/* Discogs search block */}
+      <div style={{ marginBottom: 20, background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 8, overflow: "hidden" }}>
+        <button
+          style={{ width: "100%", background: showDiscogs ? "#1a1a1a" : "transparent", border: "none", color: "#4db8ff", padding: "12px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
+          onClick={() => setShowDiscogs(s => !s)}>
+          <span style={{ fontSize: 18 }}>🔍</span>
+          <span>Buscar no Discogs para preencher automaticamente</span>
+          <span style={{ marginLeft: "auto" }}>{showDiscogs ? "▲" : "▼"}</span>
+        </button>
+        {showDiscogs && (
+          <div style={{ padding: "0 16px 16px", borderTop: "1px solid #1a1a1a" }}>
+            <div style={{ display: "flex", gap: 8, marginTop: 14, marginBottom: discogsResults.length ? 12 : 0 }}>
+              <input
+                style={{ flex: 1, background: "#111", border: "1px solid #2a2a2a", borderRadius: 4, padding: "10px 14px", color: "#f0ece4", fontSize: 15, fontFamily: "monospace", outline: "none" }}
+                placeholder="Nome do disco ou artista…"
+                value={discogsQuery}
+                onChange={e => setDiscogsQuery(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && searchDiscogs()}
+                autoFocus
+              />
+              <button
+                style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "10px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", opacity: discogsLoading ? 0.6 : 1 }}
+                onClick={searchDiscogs} disabled={discogsLoading}>
+                {discogsLoading ? "…" : "Buscar"}
+              </button>
+            </div>
+            {discogsResults.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <p style={{ fontSize: 12, fontFamily: "monospace", color: "#555", margin: "0 0 6px" }}>Selecione o disco correto:</p>
+                {discogsResults.map(r => (
+                  <div key={r.id}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#111", border: "1px solid #222", borderRadius: 6, cursor: "pointer" }}
+                    onClick={async () => {
+                      setDiscogsLoading(true);
+                      try {
+                        const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ manualQuery: r.title }) });
+                        const data = await res.json();
+                        if (!data.error) {
+                          setForm(p => ({ ...p, artist: data.artist||p.artist, album: data.album||p.album, year: String(data.year||p.year), genre: data.genre||p.genre, label: data.label||p.label, tracks: Array.isArray(data.tracks)?data.tracks.join("\n"):(data.tracks||p.tracks), coverPhoto: data.coverUrl||p.coverPhoto }));
+                          setShowDiscogs(false); setDiscogsResults([]);
+                        }
+                      } catch {} setDiscogsLoading(false);
+                    }}>
+                    {r.cover
+                      ? <img src={r.cover} alt="" style={{ width:44, height:44, objectFit:"cover", borderRadius:4, flexShrink:0 }}/>
+                      : <div style={{ width:44, height:44, background:"#1a1a1a", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>💿</div>
+                    }
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:14, color:"#f0ece4", fontFamily:"monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</div>
+                      <div style={{ fontSize:11, color:"#555", fontFamily:"monospace" }}>{r.year}{r.label ? ` · ${r.label}` : ""}{r.country ? ` · ${r.country}` : ""}</div>
+                    </div>
+                    <span style={{ color:"#c0392b", fontSize:20, flexShrink:0 }}>›</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div style={{ marginBottom: 18 }}>
