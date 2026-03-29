@@ -68,11 +68,14 @@ const pBtn = { background: "transparent", border: "1px solid #2a2a2a", color: "#
 // ── Scanner ───────────────────────────────────────────────────────────────
 function ScanOverlay({ onClose, onDetected }) {
   const videoRef = useRef(null), canvasRef = useRef(null), streamRef = useRef(null), fileRef = useRef(null);
-  const [phase, setPhase] = useState("camera");
+  const [phase, setPhase] = useState("camera"); // camera|preview|analyzing|result|manual|error
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [errMsg, setErrMsg] = useState("");
   const [camErr, setCamErr] = useState(false);
+  const [manualQuery, setManualQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [altResults, setAltResults] = useState([]);
 
   const startCam = useCallback(async () => {
     try {
@@ -97,80 +100,181 @@ function ScanOverlay({ onClose, onDetected }) {
     r.onload = ev => { stopCam(); setPreview(ev.target.result); setPhase("preview"); };
     r.readAsDataURL(file);
   };
-  const analyze = async () => {
+
+  const analyze = async (imageBase64, manual) => {
     setPhase("analyzing");
     try {
-      const b64 = preview.split(",")[1];
-      const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ imageBase64: b64 }) });
+      const body = manual
+        ? { manualQuery: manual }
+        : { imageBase64: imageBase64.split(",")[1] };
+
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
       const parsed = await res.json();
-      if (parsed.error) { setErrMsg("Não consegui identificar. Tente uma foto mais nítida."); setPhase("error"); }
-      else { setResult(parsed); setPhase("result"); }
-    } catch { setErrMsg("Erro ao analisar. Verifique sua conexão."); setPhase("error"); }
+
+      if (parsed.error) {
+        setErrMsg("Não consegui identificar. Digite o nome do disco abaixo para buscar.");
+        setPhase("manual");
+      } else {
+        setResult(parsed);
+        setAltResults(parsed.discogsResults || []);
+        setPhase("result");
+      }
+    } catch {
+      setErrMsg("Erro ao analisar. Verifique sua conexão.");
+      setPhase("manual");
+    }
   };
-  const retry = () => { setPreview(null); setResult(null); setErrMsg(""); setPhase("camera"); startCam(); };
+
+  const searchManual = async () => {
+    if (!manualQuery.trim()) return;
+    setSearching(true);
+    await analyze(null, manualQuery.trim());
+    setSearching(false);
+  };
+
+  const pickAlt = async (altId) => {
+    setPhase("analyzing");
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manualQuery: altResults.find(r => r.id === altId)?.title || "" })
+      });
+      const parsed = await res.json();
+      if (!parsed.error) { setResult(parsed); setAltResults(parsed.discogsResults || []); setPhase("result"); }
+    } catch {}
+  };
+
+  const retry = () => { setPreview(null); setResult(null); setErrMsg(""); setManualQuery(""); setAltResults([]); setPhase("camera"); startCam(); };
+
   const rb = "2px solid #c0392b";
-  const btn = (p) => ({ background: p ? "#c0392b" : "transparent", border: `1px solid ${p ? "#c0392b" : "#444"}`, color: p ? "#fff" : "#999", borderRadius: 4, padding: "12px 28px", cursor: "pointer", fontSize: 15, fontFamily: "monospace" });
+  const btn = (p, color) => ({
+    background: p ? (color||"#c0392b") : "transparent",
+    border: `1px solid ${p ? (color||"#c0392b") : "#444"}`,
+    color: p ? "#fff" : "#999",
+    borderRadius: 4, padding: "12px 24px", cursor: "pointer", fontSize: 15, fontFamily: "monospace"
+  });
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000", zIndex: 1000, display: "flex", flexDirection: "column", fontFamily: "'Georgia',serif" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #1a1a1a" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}><VinylSVG size={24} /><span style={{ fontSize: 14, fontFamily: "monospace", letterSpacing: 2, color: "#888", textTransform: "uppercase" }}>Escanear capa</span></div>
-        <button style={{ background: "transparent", border: "1px solid #333", color: "#777", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" }} onClick={() => { stopCam(); onClose(); }}>✕ Fechar</button>
+    <div style={{ position:"fixed", inset:0, background:"#000", zIndex:1000, display:"flex", flexDirection:"column", fontFamily:"'Georgia',serif" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}><VinylSVG size={24}/><span style={{ fontSize:14, fontFamily:"monospace", letterSpacing:2, color:"#888", textTransform:"uppercase" }}>Escanear capa</span></div>
+        <button style={{ background:"transparent", border:"1px solid #333", color:"#777", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={() => { stopCam(); onClose(); }}>✕ Fechar</button>
       </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, gap: 22, overflowY: "auto" }}>
-        {phase === "camera" && !camErr && (<>
-          <p style={{ fontSize: 15, fontFamily: "monospace", color: "#666", textAlign: "center" }}>Aponte para a capa do disco e fotografe</p>
-          <div style={{ position: "relative", width: "100%", maxWidth: 460 }}>
-            <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", borderRadius: 8, border: "2px solid #1e1e1e", background: "#111", display: "block" }} />
-            {[{top:8,left:8,borderTop:rb,borderLeft:rb},{top:8,right:8,borderTop:rb,borderRight:rb},{bottom:8,left:8,borderBottom:rb,borderLeft:rb},{bottom:8,right:8,borderBottom:rb,borderRight:rb}].map((s,i) => <div key={i} style={{ position:"absolute", width:24, height:24, ...s }} />)}
+
+      <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
+
+        {/* Camera */}
+        {phase==="camera" && !camErr && (<>
+          <p style={{ fontSize:15, fontFamily:"monospace", color:"#666", textAlign:"center" }}>Aponte para a capa do disco e fotografe</p>
+          <div style={{ position:"relative", width:"100%", maxWidth:460 }}>
+            <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", borderRadius:8, border:"2px solid #1e1e1e", background:"#111", display:"block" }} />
+            {[{top:8,left:8,borderTop:rb,borderLeft:rb},{top:8,right:8,borderTop:rb,borderRight:rb},{bottom:8,left:8,borderBottom:rb,borderLeft:rb},{bottom:8,right:8,borderBottom:rb,borderRight:rb}].map((s,i)=><div key={i} style={{ position:"absolute", width:24, height:24, ...s }}/>)}
           </div>
-          <canvas ref={canvasRef} style={{ display: "none" }} />
-          <button style={{ width: 80, height: 80, borderRadius: "50%", background: "#c0392b", border: "4px solid #fff", cursor: "pointer", fontSize: 32, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={snap}>📷</button>
+          <canvas ref={canvasRef} style={{ display:"none" }}/>
+          <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"4px solid #fff", cursor:"pointer", fontSize:32, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={snap}>📷</button>
           <button style={btn(false)} onClick={() => fileRef.current.click()}>📁 Usar foto da galeria</button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
-        {phase === "camera" && camErr && (<>
-          <div style={{ fontSize: 52, marginBottom: 8 }}>📷</div>
-          <p style={{ fontFamily: "monospace", fontSize: 15, color: "#666", lineHeight: 1.7, textAlign: "center" }}>Câmera não disponível.<br />Use uma foto da galeria.</p>
+
+        {phase==="camera" && camErr && (<>
+          <div style={{ fontSize:52 }}>📷</div>
+          <p style={{ fontFamily:"monospace", fontSize:15, color:"#666", lineHeight:1.7, textAlign:"center" }}>Câmera não disponível.<br/>Use uma foto da galeria.</p>
           <button style={btn(true)} onClick={() => fileRef.current.click()}>📁 Escolher da galeria</button>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
-        {phase === "preview" && (<>
-          <p style={{ fontSize: 15, fontFamily: "monospace", color: "#666", textAlign: "center" }}>A foto ficou boa?</p>
-          <img src={preview} alt="preview" style={{ width: "100%", maxWidth: 380, borderRadius: 8, border: "2px solid #1e1e1e" }} />
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
+
+        {/* Preview */}
+        {phase==="preview" && (<>
+          <p style={{ fontSize:15, fontFamily:"monospace", color:"#666", textAlign:"center" }}>A foto ficou boa?</p>
+          <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:8, border:"2px solid #1e1e1e" }}/>
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center" }}>
             <button style={btn(false)} onClick={retry}>↩ Tirar outra</button>
-            <button style={btn(true)} onClick={analyze}>🔍 Identificar disco</button>
+            <button style={btn(true)} onClick={() => analyze(preview, null)}>🔍 Identificar disco</button>
           </div>
         </>)}
-        {phase === "analyzing" && (<>
-          <div style={{ width: 50, height: 50, borderRadius: "50%", border: "3px solid #1e1e1e", borderTop: "3px solid #c0392b", animation: "spin 0.8s linear infinite" }} />
-          <p style={{ fontSize: 15, fontFamily: "monospace", color: "#666" }}>Analisando capa com IA…</p>
-          <VinylSVG size={48} spin />
+
+        {/* Analyzing */}
+        {phase==="analyzing" && (<>
+          <div style={{ width:50, height:50, borderRadius:"50%", border:"3px solid #1e1e1e", borderTop:"3px solid #c0392b", animation:"spin 0.8s linear infinite" }}/>
+          <p style={{ fontSize:15, fontFamily:"monospace", color:"#666" }}>Buscando disco…</p>
+          <VinylSVG size={48} spin/>
         </>)}
-        {phase === "result" && result && (<>
-          <p style={{ fontFamily: "monospace", color: "#2ecc71", fontSize: 15, textAlign: "center" }}>✓ Disco identificado!</p>
-          <div style={{ width: "100%", maxWidth: 460, background: "#0e0e0e", border: "1px solid #222", borderRadius: 8, overflow: "hidden" }}>
-            <div style={{ background: "#c0392b", padding: "12px 18px", fontSize: 12, fontFamily: "monospace", letterSpacing: 2, color: "#fff", textTransform: "uppercase" }}>📀 Resultado — confira abaixo e salve</div>
-            <div style={{ padding: 18 }}>
-              <div style={{ fontSize: 12, color: "#c0392b", fontFamily: "monospace", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{result.artist}</div>
-              <div style={{ fontSize: 22, color: "#f0ece4", marginBottom: 4 }}>{result.album}</div>
-              <div style={{ fontSize: 13, color: "#555", fontFamily: "monospace", marginBottom: 10 }}>{result.year} · {result.label} · {result.genre}</div>
-              <div style={{ maxHeight: 150, overflowY: "auto", borderTop: "1px solid #1a1a1a", paddingTop: 10 }}>
-                {result.tracks?.map((t, i) => <div key={i} style={{ fontSize: 13, fontFamily: "monospace", color: "#777", padding: "4px 0" }}><span style={{ color: "#2a2a2a", marginRight: 10 }}>{String(i+1).padStart(2,"0")}</span>{t}</div>)}
+
+        {/* Result */}
+        {phase==="result" && result && (<>
+          <p style={{ fontFamily:"monospace", color:"#2ecc71", fontSize:14, textAlign:"center" }}>✓ Disco identificado!</p>
+          <div style={{ width:"100%", maxWidth:460, background:"#0e0e0e", border:"1px solid #222", borderRadius:8, overflow:"hidden" }}>
+            <div style={{ display:"flex", gap:0 }}>
+              {result.coverUrl && <img src={result.coverUrl} alt="capa" style={{ width:110, height:110, objectFit:"cover", flexShrink:0 }}/>}
+              <div style={{ padding:14, flex:1 }}>
+                <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>{result.artist}</div>
+                <div style={{ fontSize:19, color:"#f0ece4", marginBottom:3, lineHeight:1.2 }}>{result.album}</div>
+                <div style={{ fontSize:12, color:"#555", fontFamily:"monospace" }}>{result.year} · {result.label}</div>
               </div>
             </div>
+            {result.tracks?.length > 0 && (
+              <div style={{ maxHeight:130, overflowY:"auto", borderTop:"1px solid #1a1a1a", padding:"8px 14px" }}>
+                {result.tracks.map((t,i)=><div key={i} style={{ fontSize:13, fontFamily:"monospace", color:"#777", padding:"3px 0" }}><span style={{ color:"#2a2a2a", marginRight:10 }}>{String(i+1).padStart(2,"0")}</span>{t}</div>)}
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 14, flexWrap: "wrap", justifyContent: "center" }}>
-            <button style={btn(false)} onClick={retry}>↩ Escanear outro</button>
+
+          {/* Alternative results from Discogs */}
+          {altResults.length > 1 && (
+            <div style={{ width:"100%", maxWidth:460 }}>
+              <p style={{ fontSize:12, fontFamily:"monospace", color:"#555", marginBottom:8 }}>Não é esse? Veja outras opções:</p>
+              {altResults.slice(1).map(r => (
+                <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#0e0e0e", border:"1px solid #1a1a1a", borderRadius:6, marginBottom:6, cursor:"pointer" }}
+                  onClick={() => pickAlt(r.id)}>
+                  {r.cover ? <img src={r.cover} alt="" style={{ width:40, height:40, objectFit:"cover", borderRadius:4 }}/> : <div style={{ width:40, height:40, background:"#111", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💿</div>}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, color:"#ddd", fontFamily:"monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</div>
+                    <div style={{ fontSize:11, color:"#555", fontFamily:"monospace" }}>{r.year} · {r.label} · {r.country}</div>
+                  </div>
+                  <span style={{ color:"#c0392b", fontSize:18 }}>›</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center" }}>
+            <button style={btn(false)} onClick={() => setPhase("manual")}>✏️ Buscar outro nome</button>
             <button style={btn(true)} onClick={() => onDetected(result)}>+ Adicionar ao catálogo</button>
           </div>
         </>)}
-        {phase === "error" && (<>
-          <div style={{ fontSize: 48, textAlign: "center" }}>🔍</div>
-          <p style={{ fontFamily: "monospace", color: "#e74c3c", fontSize: 15, textAlign: "center", maxWidth: 340 }}>{errMsg}</p>
+
+        {/* Manual search */}
+        {phase==="manual" && (<>
+          {errMsg && <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:14, textAlign:"center", maxWidth:340 }}>{errMsg}</p>}
+          <p style={{ fontFamily:"monospace", color:"#888", fontSize:14, textAlign:"center" }}>Digite o nome do disco para buscar no Discogs:</p>
+          <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column", gap:10 }}>
+            <input
+              style={{ width:"100%", background:"#111", border:"1px solid #c0392b55", borderRadius:6, padding:"13px 16px", color:"#f0ece4", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }}
+              placeholder="Ex: Final Feliz Internacional"
+              value={manualQuery}
+              onChange={e => setManualQuery(e.target.value)}
+              onKeyDown={e => e.key==="Enter" && searchManual()}
+              autoFocus
+            />
+            <button style={{ ...btn(true), opacity: searching||!manualQuery.trim() ? 0.6 : 1 }} onClick={searchManual} disabled={searching||!manualQuery.trim()}>
+              {searching ? "Buscando…" : "🔍 Buscar no Discogs"}
+            </button>
+          </div>
+          <button style={btn(false)} onClick={retry}>↩ Tirar outra foto</button>
+        </>)}
+
+        {/* Error */}
+        {phase==="error" && (<>
+          <div style={{ fontSize:48, textAlign:"center" }}>🔍</div>
+          <p style={{ fontFamily:"monospace", color:"#e74c3c", fontSize:14, textAlign:"center", maxWidth:340 }}>{errMsg}</p>
           <button style={btn(true)} onClick={retry}>↩ Tentar novamente</button>
         </>)}
+
       </div>
     </div>
   );
