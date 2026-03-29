@@ -461,8 +461,7 @@ export default function App() {
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
               {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>⚠ tem riscos</span></div>}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button style={{ background:"#1a6fa022", border:"1px solid #1a6fa066", color:"#4db8ff", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:8 }} onClick={()=>washNow(selected.id)}><span style={{fontSize:18}}>💧</span> Lavei agora</button>
-                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={()=>deleteRecord(selected.id)}>🗑 Remover</button>
+                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={()=>deleteRecord(selected.id)}>🗑 Remover disco</button>
               </div>
             </div>
           </div>
