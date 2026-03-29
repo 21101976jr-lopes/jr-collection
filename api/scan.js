@@ -35,25 +35,71 @@ export default async function handler(req, res) {
     const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
     if (parsed.error) return res.status(200).json({ error: "não identificado" });
 
-    // Step 2: Try to fetch cover art from MusicBrainz + Cover Art Archive
+    // Step 2: Search Discogs — has extensive Brazilian catalog including novelas
     let coverUrl = null;
+    let discogsData = {};
     try {
-      const mbQuery = encodeURIComponent(`release:"${parsed.album}" AND artist:"${parsed.artist}"`);
-      const mbRes = await fetch(
-        `https://musicbrainz.org/ws/2/release/?query=${mbQuery}&fmt=json&limit=3`,
-        { headers: { "User-Agent": "JrCollection/1.0 (vinyl-catalog)" } }
+      const discogsHeaders = {
+        "User-Agent": "JrCollectionApp/1.0",
+        "Authorization": `Discogs token=${process.env.DISCOGS_TOKEN}`
+      };
+
+      const searchQuery = encodeURIComponent(`${parsed.artist} ${parsed.album}`);
+      const searchRes = await fetch(
+        `https://api.discogs.com/database/search?q=${searchQuery}&type=release&per_page=3`,
+        { headers: discogsHeaders }
       );
-      const mbData = await mbRes.json();
-      const releases = mbData.releases || [];
-      for (const release of releases) {
-        try {
-          const coverRes = await fetch(`https://coverartarchive.org/release/${release.id}/front`, { redirect: "follow" });
-          if (coverRes.ok) { coverUrl = coverRes.url; break; }
-        } catch {}
+      const searchJson = await searchRes.json();
+      const results = searchJson.results || [];
+
+      if (results.length > 0) {
+        const top = results[0];
+
+        // Cover image from Discogs
+        if (top.cover_image && !top.cover_image.includes("spacer")) {
+          coverUrl = top.cover_image;
+        }
+
+        // Basic data from search result
+        if (top.year) discogsData.year = parseInt(top.year);
+        if (top.label?.length) discogsData.label = top.label[0];
+        if (top.genre?.length) discogsData.genre = top.genre[0];
+
+        // Get full tracklist from release detail
+        if (top.id) {
+          const releaseRes = await fetch(
+            `https://api.discogs.com/releases/${top.id}`,
+            { headers: discogsHeaders }
+          );
+          const releaseJson = await releaseRes.json();
+
+          if (releaseJson.tracklist?.length > 0) {
+            discogsData.tracks = releaseJson.tracklist
+              .filter(t => t.type_ === "track")
+              .map(t => t.title);
+          }
+          if (releaseJson.artists_sort) discogsData.artist = releaseJson.artists_sort;
+          if (releaseJson.title) discogsData.album = releaseJson.title;
+          if (releaseJson.labels?.[0]?.name) discogsData.label = releaseJson.labels[0].name;
+          if (releaseJson.genres?.[0]) discogsData.genre = releaseJson.genres[0];
+          if (releaseJson.year) discogsData.year = releaseJson.year;
+          // Better cover from release images
+          if (releaseJson.images?.[0]?.uri) coverUrl = releaseJson.images[0].uri;
+        }
       }
     } catch {}
 
-    return res.status(200).json({ ...parsed, coverUrl });
+    // Merge: Discogs takes priority over AI when available
+    return res.status(200).json({
+      artist: discogsData.artist || parsed.artist,
+      album:  discogsData.album  || parsed.album,
+      year:   discogsData.year   || parsed.year,
+      genre:  discogsData.genre  || parsed.genre,
+      label:  discogsData.label  || parsed.label,
+      tracks: discogsData.tracks?.length ? discogsData.tracks : (parsed.tracks || []),
+      coverUrl,
+    });
+
   } catch (e) {
     return res.status(500).json({ error: "Erro interno: " + e.message });
   }
