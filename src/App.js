@@ -619,9 +619,19 @@ export default function App() {
                         <div style={{ fontSize:16, color:"#f0ece4", lineHeight:1.3, marginBottom:6 }}><Hl text={r.album}/></div>
                         <div style={{ fontSize:12, color:"#3a3a3a", fontFamily:"monospace", marginBottom:10 }}>{r.year} · {r.genre}</div>
                         <WashDot washed={r.washed} washedDate={r.washedDate} />
-                        {mt.length>0 && <div style={{ marginTop:8, borderTop:"1px solid #141414", paddingTop:8 }}>
-                          {mt.slice(0,2).map((t,i)=><div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#ff8080", padding:"2px 0" }}>♪ {t}</div>)}
-                          {mt.length>2&&<div style={{ fontSize:11, color:"#333", fontFamily:"monospace" }}>+{mt.length-2} músicas</div>}
+                        {mt.length>0 && <div style={{ marginTop:8, borderTop:"1px solid #1e1e1e", paddingTop:8 }}>
+                          {mt.slice(0,3).map((t,i)=>{
+                            const q=(filterArtist||filterTrack||query).toLowerCase();
+                            const idx=t.toLowerCase().indexOf(q);
+                            const before=idx>=0?t.slice(0,idx):"";
+                            const match=idx>=0?t.slice(idx,idx+q.length):"";
+                            const after=idx>=0?t.slice(idx+q.length):"";
+                            return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", padding:"3px 0", display:"flex", alignItems:"flex-start", gap:6 }}>
+                              <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
+                              <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
+                            </div>;
+                          })}
+                          {mt.length>3&&<div style={{ fontSize:11, color:"#444", fontFamily:"monospace", marginTop:2 }}>+{mt.length-3} músicas com "{filterArtist||filterTrack||query}"</div>}
                         </div>}
                       </div>
                     </div>
@@ -643,6 +653,22 @@ export default function App() {
                     </div>
                     <WashDot washed={r.washed} washedDate={r.washedDate} />
                   </div>
+                  {matchedTracks(r).length>0 && (
+                    <div style={{ padding:"4px 14px 10px 80px" }}>
+                      {matchedTracks(r).slice(0,2).map((t,i)=>{
+                        const q=(filterArtist||filterTrack||query).toLowerCase();
+                        const idx=t.toLowerCase().indexOf(q);
+                        const before=idx>=0?t.slice(0,idx):"";
+                        const match=idx>=0?t.slice(idx,idx+q.length):"";
+                        const after=idx>=0?t.slice(idx+q.length):"";
+                        return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", display:"flex", alignItems:"flex-start", gap:6 }}>
+                          <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
+                          <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
+                        </div>;
+                      })}
+                      {matchedTracks(r).length>2&&<div style={{ fontSize:11, color:"#444", fontFamily:"monospace" }}>+{matchedTracks(r).length-2} músicas</div>}
+                    </div>
+                  )}
                 ))}
               </div>
         }
