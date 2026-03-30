@@ -116,7 +116,11 @@ Se não conseguir identificar absolutamente nada, retorne: {"error":"não identi
           if (releaseJson.tracklist?.length > 0) {
             discogsData.tracks = releaseJson.tracklist
               .filter(t => t.type_ === "track")
-              .map(t => t.title);
+              .map(t => {
+                // If track has its own artist (compilations, novela soundtracks), include it
+                const trackArtist = t.artists?.map(a => a.name.replace(/\s*\(\d+\)$/, "")).join(", ");
+                return trackArtist ? `${trackArtist} - ${t.title}` : t.title;
+              });
           }
           if (releaseJson.artists_sort) discogsData.artist = releaseJson.artists_sort;
           if (releaseJson.title) discogsData.album = releaseJson.title;
