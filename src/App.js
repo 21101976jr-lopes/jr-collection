@@ -478,8 +478,17 @@ export default function App() {
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
     return records.filter(r => {
-      if (fa && !r.artist.toLowerCase().includes(fa) && !r.album.toLowerCase().includes(fa)) return false;
+      // Artist/Band filter: search in disc artist AND inside each track (for compilations)
+      if (fa) {
+        const inArtist = r.artist.toLowerCase().includes(fa);
+        const inAlbum  = r.album.toLowerCase().includes(fa);
+        // Check if any track has "Artist - Song" format matching the filter
+        const inTracks = r.tracks.some(t => t.toLowerCase().includes(fa));
+        if (!inArtist && !inAlbum && !inTracks) return false;
+      }
+      // Track/Music filter: search track titles and artist part of each track
       if (ft && !r.tracks.some(t => t.toLowerCase().includes(ft))) return false;
+      // General search bar
       if (!q) return true;
       return (
         r.artist.toLowerCase().includes(q) ||
