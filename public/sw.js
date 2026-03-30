@@ -1,4 +1,4 @@
-const CACHE = 'jr-collection-v1';
+const CACHE = 'jr-collection-v3';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {
