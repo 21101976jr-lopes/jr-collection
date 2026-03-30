@@ -500,7 +500,9 @@ export default function App() {
   }, [query, records, filterArtist, filterTrack]);
 
   const matchedTracks = (r) => {
-    const q = filterTrack || query;
+    // When filtering by artist, show tracks matching that artist name
+    // When filtering by track, show tracks matching that track name
+    const q = filterTrack || filterArtist || query;
     if (!q.trim()) return [];
     return r.tracks.filter(t => t.toLowerCase().includes(q.toLowerCase()));
   };
