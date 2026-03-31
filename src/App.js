@@ -596,8 +596,8 @@ export default function App() {
       {/* ── Catalog ── */}
       {view==="catalog" && !selected && (<>
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
-          <input style={{ background:"#0e0e0e", border:"1px solid #1a1a1a", color:"#ddd", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
-          <input style={{ background:"#0e0e0e", border:"1px solid #1a1a1a", color:"#ddd", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
+          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#f0ece4", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
+          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#f0ece4", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
           <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
             <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("grid")}>⊞</button>
             <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("list")}>≡</button>
@@ -642,37 +642,42 @@ export default function App() {
                 })}
               </div>
             : <div style={{ padding:"8px 16px", display:"flex", flexDirection:"column", gap:2 }}>
-                {results.map(r=>(
-                  <div key={r.id} style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:8, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
-                    onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
-                    {r.coverPhoto
-                      ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, flexShrink:0 }} />
-                      : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{r.coverEmoji||"💿"}</div>
-                    }
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
-                      <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
-                      <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}</div>
+                {results.map(r=>{
+                  const mt = matchedTracks(r);
+                  const hq = (filterArtist||filterTrack||query).toLowerCase();
+                  return (
+                    <div key={r.id}>
+                      <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:8, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
+                        onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
+                        {r.coverPhoto
+                          ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, flexShrink:0 }} />
+                          : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{r.coverEmoji||"💿"}</div>
+                        }
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
+                          <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
+                          <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}</div>
+                        </div>
+                        <WashDot washed={r.washed} washedDate={r.washedDate} />
+                      </div>
+                      {mt.length>0 && (
+                        <div style={{ padding:"4px 14px 10px 80px", borderBottom:"1px solid #0e0e0e" }}>
+                          {mt.slice(0,2).map((t,i)=>{
+                            const idx=t.toLowerCase().indexOf(hq);
+                            const before=idx>=0?t.slice(0,idx):"";
+                            const match=idx>=0?t.slice(idx,idx+hq.length):"";
+                            const after=idx>=0?t.slice(idx+hq.length):"";
+                            return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", display:"flex", alignItems:"flex-start", gap:6 }}>
+                              <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
+                              <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
+                            </div>;
+                          })}
+                          {mt.length>2&&<div style={{ fontSize:11, color:"#444", fontFamily:"monospace" }}>+{mt.length-2} músicas</div>}
+                        </div>
+                      )}
                     </div>
-                    <WashDot washed={r.washed} washedDate={r.washedDate} />
-                  </div>
-                  {matchedTracks(r).length>0 && (
-                    <div style={{ padding:"4px 14px 10px 80px" }}>
-                      {matchedTracks(r).slice(0,2).map((t,i)=>{
-                        const q=(filterArtist||filterTrack||query).toLowerCase();
-                        const idx=t.toLowerCase().indexOf(q);
-                        const before=idx>=0?t.slice(0,idx):"";
-                        const match=idx>=0?t.slice(idx,idx+q.length):"";
-                        const after=idx>=0?t.slice(idx+q.length):"";
-                        return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", display:"flex", alignItems:"flex-start", gap:6 }}>
-                          <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
-                          <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
-                        </div>;
-                      })}
-                      {matchedTracks(r).length>2&&<div style={{ fontSize:11, color:"#444", fontFamily:"monospace" }}>+{matchedTracks(r).length-2} músicas</div>}
-                    </div>
-                  )}
-                ))}
+                  );
+                })}
               </div>
         }
       </>)}
