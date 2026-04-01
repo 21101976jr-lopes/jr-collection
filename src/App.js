@@ -558,7 +558,7 @@ export default function App() {
     <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden" }}>
       <style>{`
         @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
-        input::placeholder,textarea::placeholder{color:#2a2a2a}
+        input::placeholder,textarea::placeholder{color:#2a8080}
         input:focus,textarea:focus{border-color:#c0392b!important}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#080808}::-webkit-scrollbar-thumb{background:#1e1e1e;border-radius:3px}
         *{-webkit-tap-highlight-color:transparent}
@@ -570,7 +570,7 @@ export default function App() {
       {/* Header */}
       <div style={{ background:"linear-gradient(180deg,#130707 0%,#0a0a0a 100%)", borderBottom:"1px solid #1a1a1a", padding:"18px 18px 14px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
-          <VinylSVG size={48} spin={query.length>0||filterArtist.length>0||filterTrack.length>0} />
+          <img src="/icon-192.png" alt="JR Collection" style={{ width:64, height:64, borderRadius:12, flexShrink:0 }} />
           <div>
             <h1 style={{ fontSize:32, fontWeight:"normal", letterSpacing:3, color:"#f0ece4", margin:"0 0 3px" }}>Jr Collection</h1>
             <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:3, textTransform:"uppercase" }}>Discos-LP</div>
@@ -580,7 +580,7 @@ export default function App() {
         {view==="catalog" && !selected && (
           <div style={{ position:"relative" }}>
             <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#444", fontSize:18 }}>🔍</span>
-            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #1e1e1e", borderRadius:6, padding:"13px 14px 13px 44px", color:"#f0ece4", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Busca geral: artista, disco, música…" value={query} onChange={e => setQuery(e.target.value)} />
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #1e1e1e", borderRadius:6, padding:"13px 14px 13px 44px", color:"#5EEDED", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Busca geral: artista, disco, música…" value={query} onChange={e => setQuery(e.target.value)} />
           </div>
         )}
       </div>
@@ -596,8 +596,8 @@ export default function App() {
       {/* ── Catalog ── */}
       {view==="catalog" && !selected && (<>
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
-          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#f0ece4", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
-          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#f0ece4", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
+          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
+          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
           <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
             <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("grid")}>⊞</button>
             <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("list")}>≡</button>
