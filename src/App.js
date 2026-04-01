@@ -285,7 +285,7 @@ function ScanOverlay({ onClose, onDetected }) {
 }
 
 // ── Form fields helper ────────────────────────────────────────────────────
-const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
+const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", location: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
 
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 4, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#666", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
@@ -423,6 +423,17 @@ function RecordForm({ initial, onSave, onCancel, title }) {
       <div style={{ marginBottom: 16 }}>
         <label style={lStyle}>Faixas (uma por linha)</label>
         <textarea style={{ ...fStyle, height: 140, resize: "vertical" }} placeholder={"Faixa 1\nFaixa 2\nFaixa 3"} value={form.tracks} onChange={e => set("tracks", e.target.value)} />
+      </div>
+
+      {/* Location field */}
+      <div style={{ marginBottom: 16 }}>
+        <label style={lStyle}>📍 Localização (onde está o disco)</label>
+        <input
+          style={fStyle}
+          placeholder="Ex: Armário 1, Estante porta, Nacionais, Sala..."
+          value={form.location||""}
+          onChange={e => set("location", e.target.value)}
+        />
       </div>
 
       {/* Wash status selector */}
@@ -611,7 +622,7 @@ export default function App() {
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
         <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}>▤ CATÁLOGO</button>
         <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}>+ MANUAL</button>
-        <button style={{ background:"linear-gradient(135deg,#c0392b,#96281b)", border:"none", color:"#fff", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}>📷 ESCANEAR</button>
+        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}>📷 ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#444" }}>{results.length} disco{results.length!==1?"s":""}</span>}
       </div>
 
@@ -682,7 +693,7 @@ export default function App() {
                             {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
-                          <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}</div>
+                          <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8 }}>📍 {r.location}</span> : ""}</div>
                         </div>
                         <WashDot washed={r.washed} washedDate={r.washedDate} />
                       </div>
@@ -730,6 +741,11 @@ export default function App() {
               <div style={{ fontSize:14, color:"#555", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
               {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>⚠ tem riscos</span></div>}
+              {selected.location && (
+                <div style={{ marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:6, padding:"4px 12px" }}>📍 {selected.location}</span>
+                </div>
+              )}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
                 <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={()=>deleteRecord(selected.id)}>🗑 Remover disco</button>
               </div>
