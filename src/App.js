@@ -5,10 +5,10 @@ const loadRecords = () => { try { const s = localStorage.getItem(STORAGE_KEY); r
 const saveRecords = (r) => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); } catch {} };
 
 const DEMO_DATA = [
-  { id: 1, artist: "Pink Floyd", album: "The Wall - Disco 1", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: true, washedDate: "2024-10-15", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["In the Flesh?","The Thin Ice","Another Brick in the Wall Pt.1","The Happiest Days","Another Brick in the Wall Pt.2","Mother","Goodbye Blue Sky","Empty Spaces","Young Lust","One of My Turns"] },
-  { id: 2, artist: "Pink Floyd", album: "The Wall - Disco 2", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2023-03-01", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["Don't Leave Me Now","Another Brick in the Wall Pt.3","Goodbye Cruel World","Hey You","Is There Anybody Out There?","Nobody Home","Vera","Bring the Boys Back Home","Comfortably Numb","The Show Must Go On","In the Flesh","Run Like Hell","Waiting for the Worms","Stop","The Trial","Outside the Wall"] },
-  { id: 3, artist: "Pink Floyd", album: "Dark Side of the Moon", year: 1973, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2022-01-01", scratches: false, coverPhoto: null, coverEmoji: "🌑", tracks: ["Speak to Me","Breathe","On the Run","Time","The Great Gig in the Sky","Money","Us and Them","Brain Damage","Eclipse"] },
-  { id: 4, artist: "Vários Artistas", album: "Rock in Rio Vol. 1", year: 1985, genre: "Coletânea", label: "CBS", washed: true, washedDate: "2025-01-20", scratches: true, coverPhoto: null, coverEmoji: "🎪", tracks: ["Queen - Bohemian Rhapsody","AC/DC - Back in Black","Rod Stewart - Do Ya Think I'm Sexy","Ozzy Osbourne - Crazy Train","Iron Maiden - The Trooper"] },
+  { id: 1, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 1", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: true, washedDate: "2024-10-15", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["In the Flesh?","The Thin Ice","Another Brick in the Wall Pt.1","The Happiest Days","Another Brick in the Wall Pt.2","Mother","Goodbye Blue Sky","Empty Spaces","Young Lust","One of My Turns"] },
+  { id: 2, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 2", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2023-03-01", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["Don't Leave Me Now","Another Brick in the Wall Pt.3","Goodbye Cruel World","Hey You","Is There Anybody Out There?","Nobody Home","Vera","Bring the Boys Back Home","Comfortably Numb","The Show Must Go On","In the Flesh","Run Like Hell","Waiting for the Worms","Stop","The Trial","Outside the Wall"] },
+  { id: 3, tipo: "banda", artist: "Pink Floyd", album: "Dark Side of the Moon", year: 1973, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2022-01-01", scratches: false, coverPhoto: null, coverEmoji: "🌑", tracks: ["Speak to Me","Breathe","On the Run","Time","The Great Gig in the Sky","Money","Us and Them","Brain Damage","Eclipse"] },
+  { id: 4, tipo: "coletanea", artist: "Vários Artistas", album: "Rock in Rio Vol. 1", year: 1985, genre: "Coletânea", label: "CBS", washed: true, washedDate: "2025-01-20", scratches: true, coverPhoto: null, coverEmoji: "🎪", tracks: ["Queen - Bohemian Rhapsody","AC/DC - Back in Black","Rod Stewart - Do Ya Think I'm Sexy","Ozzy Osbourne - Crazy Train","Iron Maiden - The Trooper"] },
 ];
 
 const monthsAgo = (d) => (new Date() - new Date(d)) / (1000 * 60 * 60 * 24 * 30);
@@ -285,7 +285,7 @@ function ScanOverlay({ onClose, onDetected }) {
 }
 
 // ── Form fields helper ────────────────────────────────────────────────────
-const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
+const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
 
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 4, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#666", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
@@ -394,6 +394,20 @@ function RecordForm({ initial, onSave, onCancel, title }) {
         )}
       </div>
 
+      {/* Tipo de disco */}
+      <div style={{ marginBottom: 18 }}>
+        <label style={lStyle}>Tipo de disco</label>
+        <div style={{ display:"flex", gap:8 }}>
+          {[["banda","🎸 Banda / Artista"],["novela","📺 Novela"],["coletanea","🎵 Coletânea"]].map(([val, lbl]) => (
+            <button key={val} type="button"
+              style={{ flex:1, background: form.tipo===val ? "#c0392b" : "#0e0e0e", border:`1px solid ${form.tipo===val?"#c0392b":"#2a2a2a"}`, color: form.tipo===val ? "#fff" : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
+              onClick={() => set("tipo", val)}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Foto da capa</label>
         <PhotoPicker value={form.coverPhoto} onChange={v => set("coverPhoto", v)} />
@@ -477,6 +491,7 @@ export default function App() {
     const q  = query.toLowerCase().trim();
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
+    const tipoOrder = { banda: 0, novela: 1, coletanea: 2 };
     return records.filter(r => {
       // 1) Cantor/Banda filter: disc artist OR album name OR inside track list
       if (fa) {
@@ -497,6 +512,13 @@ export default function App() {
         r.label?.toLowerCase().includes(q) ||
         r.tracks.some(t => t.toLowerCase().includes(q))
       );
+    }).sort((a, b) => {
+      const ta = tipoOrder[a.tipo||"banda"] ?? 0;
+      const tb = tipoOrder[b.tipo||"banda"] ?? 0;
+      if (ta !== tb) return ta - tb;
+      const artistCmp = (a.artist||"").localeCompare(b.artist||"", "pt-BR", {sensitivity:"base"});
+      if (artistCmp !== 0) return artistCmp;
+      return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
     });
   }, [query, records, filterArtist, filterTrack]);
 
@@ -654,7 +676,11 @@ export default function App() {
                           : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{r.coverEmoji||"💿"}</div>
                         }
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                            <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
+                            {r.tipo==="novela" && <span style={{ fontSize:9, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>NOVELA</span>}
+                            {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
+                          </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
                           <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}</div>
                         </div>
