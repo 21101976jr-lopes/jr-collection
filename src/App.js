@@ -534,15 +534,19 @@ export default function App() {
   }, [query, records, filterArtist, filterTrack]);
 
   const matchedTracks = (r) => {
-    // When filtering by artist, show tracks matching that artist name
-    // When filtering by track, show tracks matching that track name
-    const q = filterTrack || filterArtist || query;
-    if (!q.trim()) return [];
-    return r.tracks.filter(t => t.toLowerCase().includes(q.toLowerCase()));
+    // Priority: if music filter active, show tracks matching music term
+    // If only artist filter, show tracks matching artist (for compilations)
+    // If general search, show tracks matching query
+    const term = filterTrack || (filterArtist && !filterTrack ? filterArtist : "") || query;
+    if (!term.trim()) return [];
+    return r.tracks.filter(t => t.toLowerCase().includes(term.toLowerCase()));
   };
 
+  // The highlight term: prefer music filter, then general query, then artist
+  const hlTerm = filterTrack || query || filterArtist;
+
   const Hl = ({ text }) => {
-    const q = (filterTrack || filterArtist || query).toLowerCase();
+    const q = hlTerm.toLowerCase();
     if (!q) return <span>{text}</span>;
     const idx = text.toLowerCase().indexOf(q);
     if (idx === -1) return <span>{text}</span>;
@@ -657,7 +661,7 @@ export default function App() {
                         <WashDot washed={r.washed} washedDate={r.washedDate} />
                         {mt.length>0 && <div style={{ marginTop:8, borderTop:"1px solid #1e1e1e", paddingTop:8 }}>
                           {mt.slice(0,3).map((t,i)=>{
-                            const q=(filterArtist||filterTrack||query).toLowerCase();
+                            const q=hlTerm.toLowerCase();
                             const idx=t.toLowerCase().indexOf(q);
                             const before=idx>=0?t.slice(0,idx):"";
                             const match=idx>=0?t.slice(idx,idx+q.length):"";
@@ -677,7 +681,7 @@ export default function App() {
             : <div style={{ padding:"8px 16px", display:"flex", flexDirection:"column", gap:2 }}>
                 {results.map(r=>{
                   const mt = matchedTracks(r);
-                  const hq = (filterArtist||filterTrack||query).toLowerCase();
+                  const hq = hlTerm.toLowerCase();
                   return (
                     <div key={r.id}>
                       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:8, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
