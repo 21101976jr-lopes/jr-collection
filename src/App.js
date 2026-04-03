@@ -398,7 +398,7 @@ function RecordForm({ initial, onSave, onCancel, title }) {
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Tipo de disco</label>
         <div style={{ display:"flex", gap:8 }}>
-          {[["banda","🎸 Banda / Artista"],["novela","📺 Novela"],["coletanea","🎵 Coletânea"]].map(([val, lbl]) => (
+          {[["banda","🎸 Banda / Artista"],["novela","📺 Novela"],["coletanea","🎵 Coletânea"],["outros","📦 Outros"]].map(([val, lbl]) => (
             <button key={val} type="button"
               style={{ flex:1, background: form.tipo===val ? "#c0392b" : "#0e0e0e", border:`1px solid ${form.tipo===val?"#c0392b":"#2a2a2a"}`, color: form.tipo===val ? "#fff" : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
               onClick={() => set("tipo", val)}>
@@ -502,7 +502,7 @@ export default function App() {
     const q  = query.toLowerCase().trim();
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
-    const tipoOrder = { banda: 0, novela: 1, coletanea: 2 };
+    const tipoOrder = { banda: 0, novela: 1, coletanea: 2, outros: 3 };
     return records.filter(r => {
       // 1) Cantor/Banda filter: disc artist OR album name OR inside track list
       if (fa) {
@@ -695,6 +695,7 @@ export default function App() {
                             <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
                             {r.tipo==="novela" && <span style={{ fontSize:9, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>NOVELA</span>}
                             {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
+                            {r.tipo==="outros" && <span style={{ fontSize:9, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>OUTROS</span>}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
                           <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8 }}>📍 {r.location}</span> : ""}</div>
