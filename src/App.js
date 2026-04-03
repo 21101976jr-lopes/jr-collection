@@ -746,8 +746,14 @@ export default function App() {
               <div style={{ fontSize:14, color:"#555", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
               {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>⚠ tem riscos</span></div>}
+              <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
+                {(!selected.tipo||selected.tipo==="banda") && <span style={{ fontSize:12, background:"#c0392b22", color:"#c0392b", border:"1px solid #c0392b44", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>🎸 Banda / Artista</span>}
+                {selected.tipo==="novela" && <span style={{ fontSize:12, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>📺 Novela</span>}
+                {selected.tipo==="coletanea" && <span style={{ fontSize:12, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>🎵 Coletânea</span>}
+                {selected.tipo==="outros" && <span style={{ fontSize:12, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>📦 Outros</span>}
+              </div>
               {selected.location && (
-                <div style={{ marginBottom:12, display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ marginTop:10, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
                   <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:6, padding:"4px 12px" }}>📍 {selected.location}</span>
                 </div>
               )}
