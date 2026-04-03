@@ -655,7 +655,12 @@ export default function App() {
                         : <div style={{ width:"100%", aspectRatio:"1", background:"#111", display:"flex", alignItems:"center", justifyContent:"center", fontSize:48 }}>{r.coverEmoji||"💿"}</div>
                       }
                       <div style={{ padding:"12px 12px 14px" }}>
-                        <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}><Hl text={r.artist}/></div>
+                        <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
+                          <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><Hl text={r.artist}/></div>
+                          {r.tipo==="novela" && <span style={{ fontSize:9, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>NOVELA</span>}
+                          {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
+                          {r.tipo==="outros" && <span style={{ fontSize:9, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>OUTROS</span>}
+                        </div>
                         <div style={{ fontSize:16, color:"#f0ece4", lineHeight:1.3, marginBottom:6 }}><Hl text={r.album}/></div>
                         <div style={{ fontSize:12, color:"#3a3a3a", fontFamily:"monospace", marginBottom:10 }}>{r.year} · {r.genre}</div>
                         <WashDot washed={r.washed} washedDate={r.washedDate} />
