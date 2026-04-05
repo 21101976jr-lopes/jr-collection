@@ -142,11 +142,12 @@ function ScanOverlay({ onClose, onDetected }) {
       const res = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ manualQuery: altResults.find(r => r.id === altId)?.title || "" })
+        body: JSON.stringify({ discogsId: altId })
       });
       const parsed = await res.json();
       if (!parsed.error) { setResult(parsed); setAltResults(parsed.discogsResults || []); setPhase("result"); }
-    } catch {}
+      else { setPhase("result"); }
+    } catch { setPhase("result"); }
   };
 
   const retry = () => { setPreview(null); setResult(null); setErrMsg(""); setManualQuery(""); setAltResults([]); setPhase("camera"); startCam(); };
@@ -369,7 +370,7 @@ function RecordForm({ initial, onSave, onCancel, title }) {
                     onClick={async () => {
                       setDiscogsLoading(true);
                       try {
-                        const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ manualQuery: r.title }) });
+                        const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discogsId: r.id }) });
                         const data = await res.json();
                         if (!data.error) {
                           setForm(p => ({ ...p, artist: data.artist||p.artist, album: data.album||p.album, year: String(data.year||p.year), genre: data.genre||p.genre, label: data.label||p.label, tracks: Array.isArray(data.tracks)?data.tracks.join("\n"):(data.tracks||p.tracks), coverPhoto: data.coverUrl||p.coverPhoto }));
