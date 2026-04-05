@@ -6,22 +6,45 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { imageBase64, manualQuery } = req.body;
+    const { imageBase64, manualQuery, discogsId } = req.body;
 
     const discogsHeaders = {
       "User-Agent": "JrCollectionApp/1.0",
       "Authorization": `Discogs token=${process.env.DISCOGS_TOKEN}`
     };
 
+    // ── Path 1: Fetch directly by Discogs release ID (when user picks alternative) ──
+    if (discogsId) {
+      const releaseRes = await fetch(
+        `https://api.discogs.com/releases/${discogsId}`,
+        { headers: discogsHeaders }
+      );
+      const r = await releaseRes.json();
+      const tracks = (r.tracklist || [])
+        .filter(t => t.type_ === "track")
+        .map(t => {
+          const artist = t.artists?.map(a => a.name.replace(/\s*\(\d+\)$/, "")).join(", ");
+          return artist ? `${artist} - ${t.title}` : t.title;
+        });
+      return res.status(200).json({
+        artist: r.artists_sort || r.artists?.[0]?.name || "",
+        album: r.title || "",
+        year: r.year || "",
+        genre: r.genres?.[0] || r.styles?.[0] || "",
+        label: r.labels?.[0]?.name || "",
+        tracks,
+        coverUrl: r.images?.[0]?.uri || null,
+        discogsResults: [],
+      });
+    }
+
+    // ── Path 2: Manual text search ──
     let aiResult = null;
-
-    // If manual query provided, skip AI and go straight to Discogs
     if (manualQuery) {
-      aiResult = { artist: "", album: manualQuery, query: manualQuery };
+      aiResult = { artist: "", album: manualQuery };
     } else {
-      // Step 1: Identify with Claude AI — improved prompt for Brazilian records
+      // ── Path 3: AI image recognition ──
       if (!imageBase64) return res.status(400).json({ error: "Imagem não enviada" });
-
       const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
@@ -36,114 +59,67 @@ export default async function handler(req, res) {
             role: "user",
             content: [
               { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageBase64 } },
-              { type: "text", text: `Você é um especialista em discos de vinil, incluindo música brasileira, trilhas de novelas, coletâneas, sertanejo, MPB, axé, pagode e todo tipo de disco nacional e internacional.
-
-Analise CUIDADOSAMENTE esta capa de disco de vinil. Leia TODO o texto visível na imagem: título, nome do artista, gravadora, ano, qualquer texto escrito na capa.
-
-Retorne SOMENTE um objeto JSON válido, sem markdown, sem explicação:
-{
-  "artist": "Nome exato do artista/banda como aparece na capa",
-  "album": "Nome exato do álbum como aparece na capa",
-  "year": 1979,
-  "genre": "Gênero musical",
-  "label": "Gravadora se visível",
-  "tracks": ["Faixa 1", "Faixa 2"],
-  "confidence": "high|medium|low",
-  "visibleText": "todo texto que você consegue ler na capa"
-}
-
-Se não conseguir identificar absolutamente nada, retorne: {"error":"não identificado"}` }
+              { type: "text", text: `Você é um especialista em discos de vinil, incluindo música brasileira, trilhas de novelas, coletâneas, sertanejo, MPB e todo tipo de disco nacional e internacional.\n\nAnalise CUIDADOSAMENTE esta capa. Leia TODO o texto visível: título, artista, gravadora, ano.\n\nRetorne SOMENTE JSON válido sem markdown:\n{"artist":"Nome exato do artista","album":"Nome exato do álbum","year":1979,"genre":"Gênero","label":"Gravadora","tracks":[],"confidence":"high|medium|low","visibleText":"todo texto visível na capa"}\n\nSe não identificar nada: {"error":"não identificado"}` }
             ]
           }]
         })
       });
-
       const aiData = await aiRes.json();
       const raw = aiData.content?.map(b => b.text || "").join("").trim();
       const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-
-      if (parsed.error) {
-        return res.status(200).json({ error: "não identificado", needsManualSearch: true });
-      }
+      if (parsed.error) return res.status(200).json({ error: "não identificado", needsManualSearch: true });
       aiResult = parsed;
     }
 
-    // Step 2: Search Discogs with the identified name
-    let coverUrl = null;
-    let discogsData = {};
-    let discogsResults = [];
+    // ── Search Discogs ──
+    const query = manualQuery || (aiResult.artist && aiResult.album ? `${aiResult.artist} ${aiResult.album}` : aiResult.album || aiResult.artist);
+    const searchRes = await fetch(
+      `https://api.discogs.com/database/search?q=${encodeURIComponent(query)}&type=release&per_page=5`,
+      { headers: discogsHeaders }
+    );
+    const searchJson = await searchRes.json();
+    const results = searchJson.results || [];
 
-    try {
-      // Build best possible query
-      const query = manualQuery || 
-        (aiResult.artist && aiResult.album ? `${aiResult.artist} ${aiResult.album}` : aiResult.album || aiResult.artist);
-      
-      const searchQuery = encodeURIComponent(query);
-      const searchRes = await fetch(
-        `https://api.discogs.com/database/search?q=${searchQuery}&type=release&per_page=5`,
-        { headers: discogsHeaders }
-      );
-      const searchJson = await searchRes.json();
-      const results = searchJson.results || [];
+    const discogsResults = results.slice(0, 5).map(r => ({
+      id: r.id,
+      title: r.title,
+      year: r.year,
+      label: r.label?.[0],
+      cover: r.cover_image && !r.cover_image.includes("spacer") ? r.cover_image : null,
+      country: r.country,
+    }));
 
-      // Return top results so user can pick if needed
-      discogsResults = results.slice(0, 5).map(r => ({
-        id: r.id,
-        title: r.title,
-        year: r.year,
-        label: r.label?.[0],
-        cover: r.cover_image && !r.cover_image.includes("spacer") ? r.cover_image : null,
-        country: r.country,
-      }));
+    if (results.length === 0) {
+      return res.status(200).json({
+        artist: aiResult?.artist || "", album: aiResult?.album || "",
+        year: aiResult?.year || "", genre: aiResult?.genre || "",
+        label: aiResult?.label || "", tracks: aiResult?.tracks || [],
+        coverUrl: null, discogsResults: [], needsManualSearch: true,
+      });
+    }
 
-      if (results.length > 0) {
-        const top = results[0];
-        if (top.cover_image && !top.cover_image.includes("spacer")) {
-          coverUrl = top.cover_image;
-        }
-        if (top.year) discogsData.year = parseInt(top.year);
-        if (top.label?.length) discogsData.label = top.label[0];
-        if (top.genre?.length) discogsData.genre = top.genre[0];
+    // Fetch full details of top result
+    const top = results[0];
+    const releaseRes = await fetch(`https://api.discogs.com/releases/${top.id}`, { headers: discogsHeaders });
+    const rel = await releaseRes.json();
 
-        // Get full tracklist
-        if (top.id) {
-          const releaseRes = await fetch(
-            `https://api.discogs.com/releases/${top.id}`,
-            { headers: discogsHeaders }
-          );
-          const releaseJson = await releaseRes.json();
-
-          if (releaseJson.tracklist?.length > 0) {
-            discogsData.tracks = releaseJson.tracklist
-              .filter(t => t.type_ === "track")
-              .map(t => {
-                // If track has its own artist (compilations, novela soundtracks), include it
-                const trackArtist = t.artists?.map(a => a.name.replace(/\s*\(\d+\)$/, "")).join(", ");
-                return trackArtist ? `${trackArtist} - ${t.title}` : t.title;
-              });
-          }
-          if (releaseJson.artists_sort) discogsData.artist = releaseJson.artists_sort;
-          if (releaseJson.title) discogsData.album = releaseJson.title;
-          if (releaseJson.labels?.[0]?.name) discogsData.label = releaseJson.labels[0].name;
-          if (releaseJson.genres?.[0]) discogsData.genre = releaseJson.genres[0];
-          if (releaseJson.year) discogsData.year = releaseJson.year;
-          if (releaseJson.images?.[0]?.uri) coverUrl = releaseJson.images[0].uri;
-        }
-      }
-    } catch {}
+    const tracks = (rel.tracklist || [])
+      .filter(t => t.type_ === "track")
+      .map(t => {
+        const artist = t.artists?.map(a => a.name.replace(/\s*\(\d+\)$/, "")).join(", ");
+        return artist ? `${artist} - ${t.title}` : t.title;
+      });
 
     return res.status(200).json({
-      artist: discogsData.artist || aiResult?.artist || "",
-      album:  discogsData.album  || aiResult?.album  || "",
-      year:   discogsData.year   || aiResult?.year   || "",
-      genre:  discogsData.genre  || aiResult?.genre  || "",
-      label:  discogsData.label  || aiResult?.label  || "",
-      tracks: discogsData.tracks?.length ? discogsData.tracks : (aiResult?.tracks || []),
-      coverUrl,
+      artist: rel.artists_sort || aiResult?.artist || "",
+      album: rel.title || aiResult?.album || "",
+      year: rel.year || aiResult?.year || "",
+      genre: rel.genres?.[0] || rel.styles?.[0] || aiResult?.genre || "",
+      label: rel.labels?.[0]?.name || aiResult?.label || "",
+      tracks: tracks.length ? tracks : (aiResult?.tracks || []),
+      coverUrl: rel.images?.[0]?.uri || (top.cover_image && !top.cover_image.includes("spacer") ? top.cover_image : null),
       confidence: aiResult?.confidence || "medium",
-      visibleText: aiResult?.visibleText || "",
-      discogsResults, // top results so user can pick alternative
-      needsManualSearch: discogsResults.length === 0,
+      discogsResults,
     });
 
   } catch (e) {
