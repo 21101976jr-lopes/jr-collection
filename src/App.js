@@ -3,8 +3,16 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 const STORAGE_KEY = "jr-collection-records";
 
 const loadRecords = () => {
-  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : null; }
-  catch { return null; }
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (!s) return null;
+    const records = JSON.parse(s);
+    // Filter out sentinel value that indicates photo was lost
+    return records.map(r => ({
+      ...r,
+      coverPhoto: r.coverPhoto === "__has_photo__" ? null : r.coverPhoto
+    }));
+  } catch { return null; }
 };
 
 const saveRecords = (records) => {
@@ -20,20 +28,30 @@ const saveRecords = (records) => {
   }
 };
 
-// Compress image to max ~80KB before saving
-const compressImage = (dataUrl, maxWidth = 400) => new Promise(resolve => {
+// Compress image to max ~150KB before saving
+const compressImage = (dataUrl, maxWidth = 600) => new Promise(resolve => {
+  // If not a data URL or already small enough, return as-is
   if (!dataUrl || !dataUrl.startsWith("data:image")) { resolve(dataUrl); return; }
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement("canvas");
-    const scale = Math.min(1, maxWidth / img.width);
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    resolve(canvas.toDataURL("image/jpeg", 0.7));
-  };
-  img.onerror = () => resolve(dataUrl);
-  img.src = dataUrl;
+  // If it's a URL (from Discogs), return as-is
+  if (dataUrl.startsWith("http")) { resolve(dataUrl); return; }
+  try {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const result = canvas.toDataURL("image/jpeg", 0.75);
+        // Only use compressed if it's valid
+        resolve(result && result.length > 100 ? result : dataUrl);
+      } catch { resolve(dataUrl); }
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  } catch { resolve(dataUrl); }
 });
 
 // Export catalog as JSON file
