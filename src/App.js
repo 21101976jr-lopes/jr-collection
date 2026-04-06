@@ -1,8 +1,67 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
 const STORAGE_KEY = "jr-collection-records";
-const loadRecords = () => { try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : null; } catch { return null; } };
-const saveRecords = (r) => { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(r)); } catch {} };
+
+const loadRecords = () => {
+  try { const s = localStorage.getItem(STORAGE_KEY); return s ? JSON.parse(s) : null; }
+  catch { return null; }
+};
+
+const saveRecords = (records) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+  } catch(e) {
+    // If storage is full, try saving without cover photos
+    try {
+      const slim = records.map(r => ({ ...r, coverPhoto: r.coverPhoto ? "__has_photo__" : null }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+      console.warn("Storage full — covers not saved");
+    } catch {}
+  }
+};
+
+// Compress image to max ~80KB before saving
+const compressImage = (dataUrl, maxWidth = 400) => new Promise(resolve => {
+  if (!dataUrl || !dataUrl.startsWith("data:image")) { resolve(dataUrl); return; }
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(1, maxWidth / img.width);
+    canvas.width = img.width * scale;
+    canvas.height = img.height * scale;
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    resolve(canvas.toDataURL("image/jpeg", 0.7));
+  };
+  img.onerror = () => resolve(dataUrl);
+  img.src = dataUrl;
+});
+
+// Export catalog as JSON file
+const exportCatalog = (records) => {
+  const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records }, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `jr-collection-backup-${new Date().toISOString().split("T")[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Import catalog from JSON file
+const importCatalog = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const records = data.records || data; // support both formats
+      if (Array.isArray(records)) resolve(records);
+      else reject(new Error("Formato inválido"));
+    } catch { reject(new Error("Arquivo inválido")); }
+  };
+  reader.onerror = () => reject(new Error("Erro ao ler arquivo"));
+  reader.readAsText(file);
+});
 
 const DEMO_DATA = [
   { id: 1, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 1", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: true, washedDate: "2024-10-15", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["In the Flesh?","The Thin Ice","Another Brick in the Wall Pt.1","The Happiest Days","Another Brick in the Wall Pt.2","Mother","Goodbye Blue Sky","Empty Spaces","Young Lust","One of My Turns"] },
@@ -485,9 +544,10 @@ function RecordForm({ initial, onSave, onCancel, title }) {
         Disco tem riscos
       </label>
 
-      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={() => {
+      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={async () => {
         const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
-        onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear() });
+        const coverPhoto = form.coverPhoto ? await compressImage(form.coverPhoto) : null;
+        onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
       }}>SALVAR</button>
     </div>
   );
@@ -571,9 +631,13 @@ export default function App() {
     setView("catalog");
   };
 
-  const updateRecord = (data) => {
-    setRecords(p => p.map(r => r.id === data.id ? data : r));
-    setSelected(data);
+
+  const updateRecord = async (data) => {
+    const compressed = data.coverPhoto && data.coverPhoto !== "__has_photo__"
+      ? await compressImage(data.coverPhoto) : data.coverPhoto;
+    const updated = { ...data, coverPhoto: compressed };
+    setRecords(p => p.map(r => r.id === data.id ? updated : r));
+    setSelected(updated);
     showToast("Disco atualizado! ✓");
     setView("detail");
   };
@@ -640,6 +704,23 @@ export default function App() {
         <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}>+ MANUAL</button>
         <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}>📷 ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#444" }}>{results.length} disco{results.length!==1?"s":""}</span>}
+        <button style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
+          onClick={() => exportCatalog(records)} title="Exportar backup">
+          💾
+        </button>
+        <label style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} title="Importar backup">
+          📂
+          <input type="file" accept=".json" style={{ display:"none" }} onChange={async e => {
+            const file = e.target.files[0]; if (!file) return;
+            try {
+              const imported = await importCatalog(file);
+              if (window.confirm(`Importar ${imported.length} discos? Isso VAI SUBSTITUIR seu catálogo atual.`)) {
+                setRecords(imported); showToast(`${imported.length} discos importados! ✓`);
+              }
+            } catch(err) { showToast("Erro ao importar: " + err.message); }
+            e.target.value = "";
+          }} />
+        </label>
       </div>
 
       {/* ── Catalog ── */}
