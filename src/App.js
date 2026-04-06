@@ -122,6 +122,12 @@ function ScanOverlay({ onClose, onDetected }) {
         setResult(parsed);
         setAltResults(parsed.discogsResults || []);
         setPhase("result");
+        // If not found on Discogs but AI identified, set a warning flag
+        if (parsed.foundOnDiscogs === false) {
+          setErrMsg("Disco não encontrado no Discogs. Dados preenchidos pela IA — confira e complete as faixas.");
+        } else {
+          setErrMsg("");
+        }
       }
     } catch {
       setErrMsg("Erro ao analisar. Verifique sua conexão.");
@@ -208,7 +214,12 @@ function ScanOverlay({ onClose, onDetected }) {
 
         {/* Result */}
         {phase==="result" && result && (<>
-          <p style={{ fontFamily:"monospace", color:"#2ecc71", fontSize:14, textAlign:"center" }}>✓ Disco identificado!</p>
+          <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
+            {result.foundOnDiscogs===false ? "⚠ Identificado pela IA (não encontrado no Discogs)" : "✓ Disco identificado!"}
+          </p>
+          {errMsg && result.foundOnDiscogs===false && (
+            <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:12, textAlign:"center", maxWidth:420, lineHeight:1.6 }}>{errMsg}</p>
+          )}
           <div style={{ width:"100%", maxWidth:460, background:"#0e0e0e", border:"1px solid #222", borderRadius:8, overflow:"hidden" }}>
             <div style={{ display:"flex", gap:0 }}>
               {result.coverUrl && <img src={result.coverUrl} alt="capa" style={{ width:110, height:110, objectFit:"cover", flexShrink:0 }}/>}
