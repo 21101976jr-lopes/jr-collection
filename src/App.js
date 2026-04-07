@@ -1,31 +1,82 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
 const STORAGE_KEY = "jr-collection-records";
+const DB_NAME = "JrCollectionDB";
+const DB_VERSION = 1;
 
+// ── IndexedDB for covers (supports hundreds of MB) ────────────────────────
+let _db = null;
+const openDB = () => new Promise((resolve, reject) => {
+  if (_db) { resolve(_db); return; }
+  const req = indexedDB.open(DB_NAME, DB_VERSION);
+  req.onupgradeneeded = e => {
+    const db = e.target.result;
+    if (!db.objectStoreNames.contains("covers")) db.createObjectStore("covers");
+  };
+  req.onsuccess = e => { _db = e.target.result; resolve(_db); };
+  req.onerror = () => reject(req.error);
+});
+
+const dbGetCover = async (id) => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("covers", "readonly");
+      const req = tx.objectStore("covers").get(String(id));
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch { return null; }
+};
+
+const dbSetCover = async (id, dataUrl) => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("covers", "readwrite");
+      if (dataUrl) tx.objectStore("covers").put(dataUrl, String(id));
+      else tx.objectStore("covers").delete(String(id));
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+    });
+  } catch { return false; }
+};
+
+const dbGetAllCovers = async () => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction("covers", "readonly");
+      const store = tx.objectStore("covers");
+      const result = {};
+      store.openCursor().onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) { result[cursor.key] = cursor.value; cursor.continue(); }
+        else resolve(result);
+      };
+    });
+  } catch { return {}; }
+};
+
+// ── localStorage for catalog data (text only, small) ─────────────────────
 const loadRecords = () => {
   try {
     const s = localStorage.getItem(STORAGE_KEY);
-    if (!s) return null;
-    const records = JSON.parse(s);
-    // Filter out sentinel value that indicates photo was lost
-    return records.map(r => ({
-      ...r,
-      coverPhoto: r.coverPhoto === "__has_photo__" ? null : r.coverPhoto
-    }));
+    return s ? JSON.parse(s) : null;
   } catch { return null; }
 };
 
 const saveRecords = (records) => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  } catch(e) {
-    // If storage is full, try saving without cover photos
-    try {
-      const slim = records.map(r => ({ ...r, coverPhoto: r.coverPhoto ? "__has_photo__" : null }));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
-      console.warn("Storage full — covers not saved");
-    } catch {}
-  }
+    // Save catalog WITHOUT photos (keep localStorage small)
+    const slim = records.map(({ coverPhoto, ...rest }) => rest);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
+  } catch(e) { console.error("Save error:", e); }
+};
+
+// Save single cover to IndexedDB
+const saveSingleCover = async (id, dataUrl) => {
+  await dbSetCover(id, dataUrl);
 };
 
 // Compress image to max ~150KB before saving
@@ -564,7 +615,10 @@ function RecordForm({ initial, onSave, onCancel, title }) {
 
       <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={async () => {
         const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
-        const coverPhoto = form.coverPhoto ? await compressImage(form.coverPhoto) : null;
+        // Compress only data URLs (not http URLs from Discogs)
+        const coverPhoto = form.coverPhoto && !form.coverPhoto.startsWith("http")
+          ? await compressImage(form.coverPhoto)
+          : (form.coverPhoto || null);
         onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
       }}>SALVAR</button>
     </div>
@@ -574,6 +628,7 @@ function RecordForm({ initial, onSave, onCancel, title }) {
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
   const [records, setRecords] = useState(() => loadRecords() || DEMO_DATA);
+  const [coversLoaded, setCoversLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [filterArtist, setFilterArtist] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
@@ -585,7 +640,21 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
 
-  useEffect(() => saveRecords(records), [records]);
+  // Load covers from IndexedDB on startup and merge into records
+  useEffect(() => {
+    dbGetAllCovers().then(covers => {
+      if (Object.keys(covers).length > 0) {
+        setRecords(prev => prev.map(r => ({
+          ...r,
+          coverPhoto: covers[String(r.id)] || r.coverPhoto || null
+        })));
+      }
+      setCoversLoaded(true);
+    });
+  }, []);
+
+  // Save catalog (text only) whenever records change
+  useEffect(() => { saveRecords(records); }, [records]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
   const results = useMemo(() => {
@@ -643,17 +712,26 @@ export default function App() {
     return <span>{text.slice(0,idx)}<mark style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2, fontStyle:"normal" }}>{text.slice(idx,idx+q.length)}</mark>{text.slice(idx+q.length)}</span>;
   };
 
-  const addRecord = (data) => {
-    setRecords(p => [{ ...data, id: Date.now() }, ...p]);
+  const addRecord = async (data) => {
+    const id = Date.now();
+    const compressed = data.coverPhoto && !data.coverPhoto.startsWith("http")
+      ? await compressImage(data.coverPhoto) : (data.coverPhoto || null);
+    const rec = { ...data, id, coverPhoto: compressed };
+    // Save cover to IndexedDB (large storage, no size limit issues)
+    if (compressed) await saveSingleCover(id, compressed);
+    setRecords(p => [rec, ...p]);
     showToast(`"${data.album}" adicionado! 🎵`);
     setView("catalog");
   };
 
 
   const updateRecord = async (data) => {
-    const compressed = data.coverPhoto && data.coverPhoto !== "__has_photo__"
+    const compressed = data.coverPhoto && !data.coverPhoto.startsWith("http")
       ? await compressImage(data.coverPhoto) : data.coverPhoto;
     const updated = { ...data, coverPhoto: compressed };
+    // Save cover separately
+    if (updated.coverPhoto) saveSingleCover(updated.id, updated.coverPhoto);
+    else saveSingleCover(updated.id, null);
     setRecords(p => p.map(r => r.id === data.id ? updated : r));
     setSelected(updated);
     showToast("Disco atualizado! ✓");
