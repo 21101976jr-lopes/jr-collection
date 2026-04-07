@@ -449,7 +449,56 @@ function RecordForm({ initial, onSave, onCancel, title }) {
       });
       const data = await res.json();
       if (!data.error) {
-        // Fill form with Discogs data
+        // Show results list for user to pick — do NOT auto-fill
+        const allResults = data.discogsResults || [];
+        // Add the top result to list if not already there
+        if (data.album && !allResults.find(r => r.title === data.album)) {
+          allResults.unshift({
+            id: null, // will re-fetch by name
+            title: `${data.artist} - ${data.album}`,
+            year: data.year,
+            label: data.label,
+            cover: data.coverUrl,
+            country: "",
+            _fullData: data, // carry full data for instant fill
+          });
+        }
+        setDiscogsResults(allResults.length ? allResults : []);
+        if (allResults.length === 0) {
+          // Nothing found at all — fill with what AI got
+          setForm(p => ({
+            ...p,
+            artist: data.artist || p.artist,
+            album: data.album || p.album,
+            year: String(data.year || p.year),
+            genre: data.genre || p.genre,
+            label: data.label || p.label,
+            tracks: Array.isArray(data.tracks) ? data.tracks.join("\n") : (data.tracks || p.tracks),
+            coverPhoto: data.coverUrl || p.coverPhoto,
+          }));
+          setShowDiscogs(false);
+          alert("Nenhum resultado encontrado. Preencha manualmente.");
+        }
+      }
+    } catch {}
+    setDiscogsLoading(false);
+  };
+
+  const pickDiscogsResult = async (r) => {
+    setDiscogsLoading(true);
+    try {
+      let data;
+      if (r._fullData) {
+        data = r._fullData;
+      } else {
+        const res = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ discogsId: r.id })
+        });
+        data = await res.json();
+      }
+      if (!data.error) {
         setForm(p => ({
           ...p,
           artist: data.artist || p.artist,
@@ -460,8 +509,9 @@ function RecordForm({ initial, onSave, onCancel, title }) {
           tracks: Array.isArray(data.tracks) ? data.tracks.join("\n") : (data.tracks || p.tracks),
           coverPhoto: data.coverUrl || p.coverPhoto,
         }));
-        setDiscogsResults(data.discogsResults || []);
         setShowDiscogs(false);
+        setDiscogsResults([]);
+        setDiscogsQuery("");
       }
     } catch {}
     setDiscogsLoading(false);
@@ -502,32 +552,31 @@ function RecordForm({ initial, onSave, onCancel, title }) {
             </div>
             {discogsResults.length > 0 && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <p style={{ fontSize: 12, fontFamily: "monospace", color: "#555", margin: "0 0 6px" }}>Selecione o disco correto:</p>
-                {discogsResults.map(r => (
-                  <div key={r.id}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: "#111", border: "1px solid #222", borderRadius: 6, cursor: "pointer" }}
-                    onClick={async () => {
-                      setDiscogsLoading(true);
-                      try {
-                        const res = await fetch("/api/scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ discogsId: r.id }) });
-                        const data = await res.json();
-                        if (!data.error) {
-                          setForm(p => ({ ...p, artist: data.artist||p.artist, album: data.album||p.album, year: String(data.year||p.year), genre: data.genre||p.genre, label: data.label||p.label, tracks: Array.isArray(data.tracks)?data.tracks.join("\n"):(data.tracks||p.tracks), coverPhoto: data.coverUrl||p.coverPhoto }));
-                          setShowDiscogs(false); setDiscogsResults([]);
-                        }
-                      } catch {} setDiscogsLoading(false);
-                    }}>
+                <p style={{ fontSize: 13, fontFamily: "monospace", color: "#5EEDED", margin: "0 0 8px" }}>
+                  {discogsResults.length} resultado{discogsResults.length!==1?"s":""} — toque para selecionar:
+                </p>
+                {discogsResults.map((r, i) => (
+                  <div key={r.id||i}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#111", border: "1px solid #252525", borderRadius: 8, cursor: "pointer" }}
+                    onClick={() => pickDiscogsResult(r)}>
                     {r.cover
-                      ? <img src={r.cover} alt="" style={{ width:44, height:44, objectFit:"cover", borderRadius:4, flexShrink:0 }}/>
-                      : <div style={{ width:44, height:44, background:"#1a1a1a", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>💿</div>
+                      ? <img src={r.cover} alt="" style={{ width:52, height:52, objectFit:"cover", borderRadius:6, flexShrink:0 }}/>
+                      : <div style={{ width:52, height:52, background:"#1a1a1a", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>💿</div>
                     }
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:14, color:"#f0ece4", fontFamily:"monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</div>
-                      <div style={{ fontSize:11, color:"#555", fontFamily:"monospace" }}>{r.year}{r.label ? ` · ${r.label}` : ""}{r.country ? ` · ${r.country}` : ""}</div>
+                      <div style={{ fontSize:12, color:"#666", fontFamily:"monospace" }}>
+                        {[r.year, r.label, r.country].filter(Boolean).join(" · ")}
+                      </div>
                     </div>
-                    <span style={{ color:"#c0392b", fontSize:20, flexShrink:0 }}>›</span>
+                    <span style={{ color:"#c0392b", fontSize:22, flexShrink:0 }}>›</span>
                   </div>
                 ))}
+                <button
+                  style={{ background:"transparent", border:"1px solid #333", color:"#666", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginTop:4 }}
+                  onClick={() => { setDiscogsResults([]); setDiscogsQuery(""); }}>
+                  ✕ Limpar resultados
+                </button>
               </div>
             )}
           </div>
