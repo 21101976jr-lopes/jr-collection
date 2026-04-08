@@ -79,30 +79,53 @@ const saveSingleCover = async (id, dataUrl) => {
   await dbSetCover(id, dataUrl);
 };
 
-// Compress image to max ~150KB before saving
-const compressImage = (dataUrl, maxWidth = 600) => new Promise(resolve => {
-  // If not a data URL or already small enough, return as-is
-  if (!dataUrl || !dataUrl.startsWith("data:image")) { resolve(dataUrl); return; }
-  // If it's a URL (from Discogs), return as-is
+// Compress image to max ~100KB — aggressive but good quality for album art
+const compressImage = (dataUrl, maxWidth = 500) => new Promise(resolve => {
+  if (!dataUrl) { resolve(null); return; }
   if (dataUrl.startsWith("http")) { resolve(dataUrl); return; }
+  if (!dataUrl.startsWith("data:image")) { resolve(dataUrl); return; }
   try {
     const img = new Image();
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        const scale = Math.min(1, maxWidth / Math.max(img.width, 1));
+        const scale = Math.min(1, maxWidth / Math.max(img.width, img.height, 1));
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const result = canvas.toDataURL("image/jpeg", 0.75);
-        // Only use compressed if it's valid
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Start with quality 0.7, reduce if still too big
+        let result = canvas.toDataURL("image/jpeg", 0.7);
+        if (result.length > 150000) result = canvas.toDataURL("image/jpeg", 0.5);
+        if (result.length > 150000) result = canvas.toDataURL("image/jpeg", 0.35);
         resolve(result && result.length > 100 ? result : dataUrl);
       } catch { resolve(dataUrl); }
     };
     img.onerror = () => resolve(dataUrl);
     img.src = dataUrl;
   } catch { resolve(dataUrl); }
+});
+
+// Download a Discogs URL and convert to compressed base64
+// This prevents expiring URLs — photo is stored permanently
+const fetchAndCompressUrl = (url) => new Promise(resolve => {
+  if (!url || !url.startsWith("http")) { resolve(url); return; }
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    try {
+      const canvas = document.createElement("canvas");
+      const maxW = 500;
+      const scale = Math.min(1, maxW / Math.max(img.width, img.height, 1));
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      let result = canvas.toDataURL("image/jpeg", 0.7);
+      if (result.length > 150000) result = canvas.toDataURL("image/jpeg", 0.5);
+      resolve(result && result.length > 100 ? result : url);
+    } catch { resolve(url); }
+  };
+  img.onerror = () => resolve(url); // keep URL if download fails
+  img.src = url;
 });
 
 // Export catalog as JSON file
@@ -763,11 +786,17 @@ export default function App() {
 
   const addRecord = async (data) => {
     const id = Date.now();
-    const compressed = data.coverPhoto && !data.coverPhoto.startsWith("http")
-      ? await compressImage(data.coverPhoto) : (data.coverPhoto || null);
-    const rec = { ...data, id, coverPhoto: compressed };
-    // Save cover to IndexedDB (large storage, no size limit issues)
-    if (compressed) await saveSingleCover(id, compressed);
+    let coverPhoto = data.coverPhoto || null;
+    if (coverPhoto) {
+      if (coverPhoto.startsWith("http")) {
+        // Convert Discogs URL to permanent base64
+        coverPhoto = await fetchAndCompressUrl(coverPhoto);
+      } else {
+        coverPhoto = await compressImage(coverPhoto);
+      }
+    }
+    const rec = { ...data, id, coverPhoto };
+    if (coverPhoto) await saveSingleCover(id, coverPhoto);
     setRecords(p => [rec, ...p]);
     showToast(`"${data.album}" adicionado! 🎵`);
     setView("catalog");
@@ -775,12 +804,16 @@ export default function App() {
 
 
   const updateRecord = async (data) => {
-    const compressed = data.coverPhoto && !data.coverPhoto.startsWith("http")
-      ? await compressImage(data.coverPhoto) : data.coverPhoto;
-    const updated = { ...data, coverPhoto: compressed };
-    // Save cover separately
-    if (updated.coverPhoto) saveSingleCover(updated.id, updated.coverPhoto);
-    else saveSingleCover(updated.id, null);
+    let coverPhoto = data.coverPhoto || null;
+    if (coverPhoto) {
+      if (coverPhoto.startsWith("http")) {
+        coverPhoto = await fetchAndCompressUrl(coverPhoto);
+      } else if (coverPhoto.startsWith("data:")) {
+        coverPhoto = await compressImage(coverPhoto);
+      }
+    }
+    const updated = { ...data, coverPhoto };
+    await saveSingleCover(updated.id, coverPhoto || null);
     setRecords(p => p.map(r => r.id === data.id ? updated : r));
     setSelected(updated);
     showToast("Disco atualizado! ✓");
@@ -860,7 +893,24 @@ export default function App() {
             try {
               const imported = await importCatalog(file);
               if (window.confirm(`Importar ${imported.length} discos? Isso VAI SUBSTITUIR seu catálogo atual.`)) {
-                setRecords(imported); showToast(`${imported.length} discos importados! ✓`);
+                // Convert any URL covers to base64 on import
+                showToast("Importando... aguarde");
+                const fixed = await Promise.all(imported.map(async r => {
+                  if (r.coverPhoto && r.coverPhoto.startsWith("http")) {
+                    const b64 = await fetchAndCompressUrl(r.coverPhoto);
+                    if (r.id) await saveSingleCover(r.id, b64);
+                    return { ...r, coverPhoto: b64 };
+                  }
+                  if (r.coverPhoto && r.coverPhoto.startsWith("data:") && r.coverPhoto.length > 200000) {
+                    const b64 = await compressImage(r.coverPhoto);
+                    if (r.id) await saveSingleCover(r.id, b64);
+                    return { ...r, coverPhoto: b64 };
+                  }
+                  if (r.id && r.coverPhoto) await saveSingleCover(r.id, r.coverPhoto);
+                  return r;
+                }));
+                setRecords(fixed);
+                showToast(`${fixed.length} discos importados! ✓`);
               }
             } catch(err) { showToast("Erro ao importar: " + err.message); }
             e.target.value = "";
