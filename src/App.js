@@ -162,45 +162,48 @@ const useDeezerPreview = () => {
   const audioRef = useRef(null);
 
   const searchAndPlay = async (trackName, artist) => {
-    // If same track, toggle pause/play
+    // Toggle if same track
     if (playing === trackName) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setPlaying(null);
       return;
     }
-
     // Stop current
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setPlaying(null);
     setLoading(trackName);
 
     try {
-      // Extract just the song title (remove "Artist - " prefix from compilations)
+      // For compilations: "Artist - Song" → use track artist
       const songTitle = trackName.includes(" - ")
         ? trackName.split(" - ").slice(1).join(" - ")
         : trackName;
       const searchArtist = trackName.includes(" - ")
         ? trackName.split(" - ")[0]
-        : artist;
+        : (artist || "");
 
-      const q = encodeURIComponent(`${searchArtist} ${songTitle}`);
-      const res = await fetch(`https://api.deezer.com/search?q=${q}&limit=1&output=json`);
+      // Use our proxy to avoid CORS
+      const params = new URLSearchParams({ track: songTitle, artist: searchArtist });
+      const res = await fetch(`/api/deezer?${params}`);
       const data = await res.json();
-      const preview = data.data?.[0]?.preview;
+      const preview = data.results?.[0]?.preview;
 
-      if (!preview) { setLoading(null); alert("Prévia não disponível para esta música."); return; }
+      if (!preview) {
+        setLoading(null);
+        alert("Prévia não disponível para esta música no Deezer.");
+        return;
+      }
 
       const audio = new Audio(preview);
       audioRef.current = audio;
-      audio.volume = 0.8;
+      audio.volume = 0.85;
       audio.onended = () => { setPlaying(null); audioRef.current = null; };
       audio.onerror = () => { setPlaying(null); setLoading(null); audioRef.current = null; };
       await audio.play();
       setPlaying(trackName);
-    } catch { alert("Erro ao buscar prévia."); }
+    } catch(e) {
+      alert("Erro ao buscar prévia. Verifique sua conexão.");
+    }
     setLoading(null);
   };
 
