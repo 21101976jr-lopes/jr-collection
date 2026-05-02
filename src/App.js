@@ -155,6 +155,63 @@ const importCatalog = (file) => new Promise((resolve, reject) => {
   reader.readAsText(file);
 });
 
+// ── Deezer 30s preview ───────────────────────────────────────────────────
+const useDeezerPreview = () => {
+  const [playing, setPlaying] = React.useState(null); // track name playing
+  const [loading, setLoading] = React.useState(null);
+  const audioRef = React.useRef(null);
+
+  const searchAndPlay = async (trackName, artist) => {
+    // If same track, toggle pause/play
+    if (playing === trackName) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setPlaying(null);
+      return;
+    }
+
+    // Stop current
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setPlaying(null);
+    setLoading(trackName);
+
+    try {
+      // Extract just the song title (remove "Artist - " prefix from compilations)
+      const songTitle = trackName.includes(" - ")
+        ? trackName.split(" - ").slice(1).join(" - ")
+        : trackName;
+      const searchArtist = trackName.includes(" - ")
+        ? trackName.split(" - ")[0]
+        : artist;
+
+      const q = encodeURIComponent(`${searchArtist} ${songTitle}`);
+      const res = await fetch(`https://api.deezer.com/search?q=${q}&limit=1&output=json`);
+      const data = await res.json();
+      const preview = data.data?.[0]?.preview;
+
+      if (!preview) { setLoading(null); alert("Prévia não disponível para esta música."); return; }
+
+      const audio = new Audio(preview);
+      audioRef.current = audio;
+      audio.volume = 0.8;
+      audio.onended = () => { setPlaying(null); audioRef.current = null; };
+      audio.onerror = () => { setPlaying(null); setLoading(null); audioRef.current = null; };
+      await audio.play();
+      setPlaying(trackName);
+    } catch { alert("Erro ao buscar prévia."); }
+    setLoading(null);
+  };
+
+  const stop = () => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    setPlaying(null);
+  };
+
+  return { playing, loading, searchAndPlay, stop };
+};
+
 const DEMO_DATA = [
   { id: 1, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 1", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: true, washedDate: "2024-10-15", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["In the Flesh?","The Thin Ice","Another Brick in the Wall Pt.1","The Happiest Days","Another Brick in the Wall Pt.2","Mother","Goodbye Blue Sky","Empty Spaces","Young Lust","One of My Turns"] },
   { id: 2, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 2", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2023-03-01", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["Don't Leave Me Now","Another Brick in the Wall Pt.3","Goodbye Cruel World","Hey You","Is There Anybody Out There?","Nobody Home","Vera","Bring the Boys Back Home","Comfortably Numb","The Show Must Go On","In the Flesh","Run Like Hell","Waiting for the Worms","Stop","The Trial","Outside the Wall"] },
@@ -700,6 +757,7 @@ function RecordForm({ initial, onSave, onCancel, title }) {
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
   const [records, setRecords] = useState(() => loadRecords() || DEMO_DATA);
+  const { playing, loading, searchAndPlay, stop } = useDeezerPreview();
   const [coversLoaded, setCoversLoaded] = useState(false);
   const [query, setQuery] = useState("");
   const [filterArtist, setFilterArtist] = useState("");
@@ -1056,16 +1114,34 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{ fontSize:13, fontFamily:"monospace", color:"#444", letterSpacing:1, marginBottom:8 }}>FAIXAS — {selected.tracks.length}</div>
+          <div style={{ fontSize:13, fontFamily:"monospace", color:"#444", letterSpacing:1, marginBottom:8 }}>FAIXAS — {selected.tracks.length} <span style={{ color:"#3a3a3a", fontSize:11 }}>▶ toque para ouvir 30s</span></div>
           <div style={{ background:"#0c0c0c", border:"1px solid #141414", borderRadius:8, padding:"6px 0" }}>
             {selected.tracks.map((t,i)=>{
               const q = filterTrack||query;
               const m = q && t.toLowerCase().includes(q.toLowerCase());
-              return <div key={i} style={{ padding:"8px 16px", fontSize:15, fontFamily:"monospace", color:m?"#ff8080":"#777", background:m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":"transparent"}` }}>
-                <span style={{ color:"#2a2a2a", marginRight:12 }}>{String(i+1).padStart(2,"0")}</span>{t}
-              </div>;
+              const isPlaying = playing === t;
+              const isLoading = loading === t;
+              return (
+                <div key={i} style={{ padding:"8px 14px", fontSize:14, fontFamily:"monospace", color:m?"#ff8080":isPlaying?"#5EEDED":"#777", background:isPlaying?"#5EEDED0d":m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":isPlaying?"#5EEDED":"transparent"}`, display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ color:"#2a2a2a", flexShrink:0, fontSize:12, minWidth:20 }}>{String(i+1).padStart(2,"0")}</span>
+                  <span style={{ flex:1, lineHeight:1.3 }}>{t}</span>
+                  <button
+                    onClick={() => searchAndPlay(t, selected.artist)}
+                    title={isPlaying?"Pausar":"Ouvir prévia de 30s"}
+                    style={{ background:isPlaying?"#5EEDED22":"#111", border:`1px solid ${isPlaying?"#5EEDED66":"#222"}`, borderRadius:"50%", width:28, height:28, cursor:"pointer", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:isPlaying?"#5EEDED":"#555", transition:"all 0.15s" }}>
+                    {isLoading?"⏳":isPlaying?"⏸":"▶"}
+                  </button>
+                </div>
+              );
             })}
           </div>
+          {playing && (
+            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:8 }}>
+              <span style={{ fontSize:18 }}>🎵</span>
+              <span style={{ fontSize:12, fontFamily:"monospace", color:"#5EEDED", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{playing}</span>
+              <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:4, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }}>■ parar</button>
+            </div>
+          )}
         </div>
       )}
 
