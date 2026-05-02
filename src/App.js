@@ -157,9 +157,9 @@ const importCatalog = (file) => new Promise((resolve, reject) => {
 
 // ── Deezer 30s preview ───────────────────────────────────────────────────
 const useDeezerPreview = () => {
-  const [playing, setPlaying] = React.useState(null); // track name playing
-  const [loading, setLoading] = React.useState(null);
-  const audioRef = React.useRef(null);
+  const [playing, setPlaying] = useState(null);
+  const [loading, setLoading] = useState(null);
+  const audioRef = useRef(null);
 
   const searchAndPlay = async (trackName, artist) => {
     // If same track, toggle pause/play
