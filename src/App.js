@@ -1,6 +1,24 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
 const STORAGE_KEY = "jr-collection-records";
+const CATS_KEY = "jr-collection-categories";
+
+const loadCategories = () => {
+  try {
+    const s = localStorage.getItem(CATS_KEY);
+    return s ? JSON.parse(s) : [
+      { id: "banda",    name: "Banda / Artista", color: "#c0392b" },
+      { id: "novela",   name: "Novela",           color: "#9b59b6" },
+      { id: "coletanea",name: "Coletânea",         color: "#27ae60" },
+      { id: "outros",   name: "Outros",            color: "#e67e22" },
+    ];
+  } catch { return []; }
+};
+
+const saveCategories = (cats) => {
+  try { localStorage.setItem(CATS_KEY, JSON.stringify(cats)); } catch {}
+};
+
 const DB_NAME = "JrCollectionDB";
 const DB_VERSION = 1;
 
@@ -670,11 +688,11 @@ function RecordForm({ initial, onSave, onCancel, title }) {
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Tipo de disco</label>
         <div style={{ display:"flex", gap:8 }}>
-          {[["banda","🎸 Banda / Artista"],["novela","📺 Novela"],["coletanea","🎵 Coletânea"],["outros","📦 Outros"]].map(([val, lbl]) => (
-            <button key={val} type="button"
-              style={{ flex:1, background: form.tipo===val ? "#c0392b" : "#0e0e0e", border:`1px solid ${form.tipo===val?"#c0392b":"#2a2a2a"}`, color: form.tipo===val ? "#fff" : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
-              onClick={() => set("tipo", val)}>
-              {lbl}
+          {categories.map(cat => (
+            <button key={cat.id} type="button"
+              style={{ flex:1, background: form.tipo===cat.id ? cat.color : "#0e0e0e", border:`1px solid ${form.tipo===cat.id ? cat.color : "#2a2a2a"}`, color: form.tipo===cat.id ? "#fff" : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
+              onClick={() => set("tipo", cat.id)}>
+              {cat.name}
             </button>
           ))}
         </div>
@@ -760,6 +778,9 @@ function RecordForm({ initial, onSave, onCancel, title }) {
 // ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
   const [records, setRecords] = useState(() => loadRecords() || DEMO_DATA);
+  const [categories, setCategories] = useState(() => loadCategories());
+  const [filterCat, setFilterCat] = useState(null); // null = all
+  const [showCatManager, setShowCatManager] = useState(false);
   const { playing, loading, searchAndPlay, stop } = useDeezerPreview();
   const [coversLoaded, setCoversLoaded] = useState(false);
   const [query, setQuery] = useState("");
@@ -788,26 +809,26 @@ export default function App() {
 
   // Save catalog (text only) whenever records change
   useEffect(() => { saveRecords(records); }, [records]);
+  useEffect(() => { saveCategories(categories); }, [categories]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
   const results = useMemo(() => {
     const q  = query.toLowerCase().trim();
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
-    const tipoOrder = { banda: 0, novela: 1, coletanea: 2, outros: 3 };
     return records.filter(r => {
-      // 1) Cantor/Banda filter: disc artist OR album name OR inside track list
+      // Category button filter
+      if (filterCat && r.tipo !== filterCat) return false;
+      // Cantor/Banda filter
       if (fa) {
         const inArtist = r.artist.toLowerCase().includes(fa);
         const inAlbum  = r.album.toLowerCase().includes(fa);
         const inTracks = r.tracks.some(t => t.toLowerCase().includes(fa));
         if (!inArtist && !inAlbum && !inTracks) return false;
       }
-      // 2) Música filter: any track matches
-      if (ft) {
-        if (!r.tracks.some(t => t.toLowerCase().includes(ft))) return false;
-      }
-      // 3) General search bar (only applied when typed)
+      // Música filter
+      if (ft && !r.tracks.some(t => t.toLowerCase().includes(ft))) return false;
+      // General search
       if (!q) return true;
       return (
         r.artist.toLowerCase().includes(q) ||
@@ -816,14 +837,16 @@ export default function App() {
         r.tracks.some(t => t.toLowerCase().includes(q))
       );
     }).sort((a, b) => {
-      const ta = tipoOrder[a.tipo||"banda"] ?? 0;
-      const tb = tipoOrder[b.tipo||"banda"] ?? 0;
-      if (ta !== tb) return ta - tb;
+      // Sort by category order, then alphabetically
+      const catIds = categories.map(c => c.id);
+      const ta = catIds.indexOf(a.tipo || catIds[0]);
+      const tb = catIds.indexOf(b.tipo || catIds[0]);
+      if (ta !== tb) return (ta === -1 ? 999 : ta) - (tb === -1 ? 999 : tb);
       const artistCmp = (a.artist||"").localeCompare(b.artist||"", "pt-BR", {sensitivity:"base"});
       if (artistCmp !== 0) return artistCmp;
       return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
     });
-  }, [query, records, filterArtist, filterTrack]);
+  }, [query, records, filterArtist, filterTrack, filterCat, categories]);
 
   const matchedTracks = (r) => {
     // Priority: if music filter active, show tracks matching music term
@@ -981,6 +1004,15 @@ export default function App() {
 
       {/* ── Catalog ── */}
       {view==="catalog" && !selected && (<>
+        {/* Category filter buttons */}
+        <div style={{ display:"flex", gap:6, padding:"10px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
+          <button style={{ background:filterCat===null?"#f0ece4":"transparent", border:"1px solid #333", color:filterCat===null?"#0a0a0a":"#666", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(null)}>Todos</button>
+          {categories.map(cat => (
+            <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?"#fff":"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
+          ))}
+          <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #222", color:"#555", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace" }} onClick={() => setShowCatManager(true)}>✏️ categorias</button>
+        </div>
+
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
           <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
           <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
@@ -1006,9 +1038,7 @@ export default function App() {
                       <div style={{ padding:"12px 12px 14px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
                           <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><Hl text={r.artist}/></div>
-                          {r.tipo==="novela" && <span style={{ fontSize:9, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>NOVELA</span>}
-                          {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
-                          {r.tipo==="outros" && <span style={{ fontSize:9, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>OUTROS</span>}
+                          {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
                         </div>
                         <div style={{ fontSize:16, color:"#f0ece4", lineHeight:1.3, marginBottom:6 }}><Hl text={r.album}/></div>
                         <div style={{ fontSize:12, color:"#3a3a3a", fontFamily:"monospace", marginBottom:10 }}>{r.year} · {r.genre}</div>
@@ -1047,9 +1077,7 @@ export default function App() {
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                             <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
-                            {r.tipo==="novela" && <span style={{ fontSize:9, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>NOVELA</span>}
-                            {r.tipo==="coletanea" && <span style={{ fontSize:9, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>COLET.</span>}
-                            {r.tipo==="outros" && <span style={{ fontSize:9, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>OUTROS</span>}
+                            {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
                           <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8 }}>📍 {r.location}</span> : ""}</div>
@@ -1101,10 +1129,7 @@ export default function App() {
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
               {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>⚠ tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
-                {(!selected.tipo||selected.tipo==="banda") && <span style={{ fontSize:12, background:"#c0392b22", color:"#c0392b", border:"1px solid #c0392b44", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>🎸 Banda / Artista</span>}
-                {selected.tipo==="novela" && <span style={{ fontSize:12, background:"#9b59b622", color:"#9b59b6", border:"1px solid #9b59b644", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>📺 Novela</span>}
-                {selected.tipo==="coletanea" && <span style={{ fontSize:12, background:"#27ae6022", color:"#27ae60", border:"1px solid #27ae6044", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>🎵 Coletânea</span>}
-                {selected.tipo==="outros" && <span style={{ fontSize:12, background:"#e67e2222", color:"#e67e22", border:"1px solid #e67e2244", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>📦 Outros</span>}
+                {(()=>{ const cat = categories.find(c=>c.id===selected.tipo) || categories[0]; return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : null; })()}
               </div>
               {selected.location && (
                 <div style={{ marginTop:10, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
