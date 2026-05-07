@@ -1018,7 +1018,7 @@ export default function App() {
         <div style={{ display:"flex", gap:6, padding:"10px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
           <button style={{ background:filterCat===null?"#f0ece4":"transparent", border:"1px solid #333", color:filterCat===null?"#0a0a0a":"#666", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(null)}>Todos</button>
           {categories.map(cat => (
-            <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?"#fff":"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
+            <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?textColorFor(cat.color):"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
           ))}
           <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #222", color:"#555", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace" }} onClick={() => setShowCatManager(true)}>✏️ categorias</button>
         </div>
