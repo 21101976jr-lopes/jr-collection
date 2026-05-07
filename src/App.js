@@ -531,7 +531,7 @@ const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 4, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#666", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
 
-function RecordForm({ initial, onSave, onCancel, title }) {
+function RecordForm({ initial, onSave, onCancel, title, categories }) {
   const [form, setForm] = useState(initial);
   const [discogsQuery, setDiscogsQuery] = useState("");
   const [discogsResults, setDiscogsResults] = useState([]);
@@ -1173,6 +1173,50 @@ export default function App() {
         </div>
       )}
 
+
+      {/* Category Manager Modal */}
+      {showCatManager && (
+        <div style={{ position:"fixed", inset:0, background:"#000000cc", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#0e0e0e", border:"1px solid #222", borderRadius:12, padding:24, width:"100%", maxWidth:420, maxHeight:"80vh", overflowY:"auto" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+              <h3 style={{ fontWeight:"normal", fontSize:16, letterSpacing:2, textTransform:"uppercase", color:"#f0ece4", margin:0 }}>Gerenciar Categorias</h3>
+              <button style={{ background:"transparent", border:"1px solid #333", color:"#777", borderRadius:4, padding:"5px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setShowCatManager(false)}>X Fechar</button>
+            </div>
+            <p style={{ fontSize:12, fontFamily:"monospace", color:"#555", marginBottom:16, lineHeight:1.6 }}>
+              Toque no quadrado colorido para mudar a cor. Toque no nome para renomear.
+            </p>
+            {categories.map((cat, idx) => (
+              <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                <input type="color" value={cat.color}
+                  onChange={e => setCategories(prev => prev.map((c,i) => i===idx ? {...c, color:e.target.value} : c))}
+                  style={{ width:36, height:36, border:"none", background:"none", cursor:"pointer", borderRadius:6, flexShrink:0, padding:2 }}
+                />
+                <input
+                  style={{ flex:1, background:"#111", border:"1px solid #2a2a2a", borderRadius:6, padding:"10px 12px", color:"#f0ece4", fontSize:15, fontFamily:"monospace", outline:"none" }}
+                  value={cat.name}
+                  onChange={e => setCategories(prev => prev.map((c,i) => i===idx ? {...c, name:e.target.value} : c))}
+                />
+                <button
+                  style={{ background:"transparent", border:"1px solid #e74c3c44", color:"#e74c3c", borderRadius:6, padding:"8px 12px", cursor:"pointer", fontSize:14, flexShrink:0 }}
+                  onClick={() => {
+                    if (window.confirm("Remover " + cat.name + "?")) {
+                      setCategories(prev => prev.filter(c => c.id !== cat.id));
+                    }
+                  }}>Delete</button>
+              </div>
+            ))}
+            <button
+              style={{ width:"100%", marginTop:12, background:"#1a1a1a", border:"1px solid #333", color:"#aaa", borderRadius:6, padding:"12px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              onClick={() => {
+                const name = prompt("Nome da nova categoria:");
+                if (!name || !name.trim()) return;
+                setCategories(prev => [...prev, { id:"cat_"+Date.now(), name:name.trim(), color:"#3498db" }]);
+              }}>
+              + Nova categoria
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── Add ── */}
       {view==="add" && (
         <RecordForm
@@ -1180,6 +1224,7 @@ export default function App() {
           title="Adicionar disco"
           onSave={addRecord}
           onCancel={() => setView("catalog")}
+          categories={categories}
         />
       )}
 
@@ -1190,6 +1235,7 @@ export default function App() {
           title="Editar disco"
           onSave={(data) => updateRecord({ ...selected, ...data })}
           onCancel={() => setView("detail")}
+          categories={categories}
         />
       )}
     </div>
