@@ -3,6 +3,16 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 const STORAGE_KEY = "jr-collection-records";
 const CATS_KEY = "jr-collection-categories";
 
+// Returns black or white depending on background color luminance
+const textColorFor = (hex) => {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  // Perceived luminance formula
+  const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+  return luminance > 0.55 ? "#111111" : "#ffffff";
+};
+
 const loadCategories = () => {
   try {
     const s = localStorage.getItem(CATS_KEY);
@@ -690,7 +700,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <div style={{ display:"flex", gap:8 }}>
           {categories.map(cat => (
             <button key={cat.id} type="button"
-              style={{ flex:1, background: form.tipo===cat.id ? cat.color : "#0e0e0e", border:`1px solid ${form.tipo===cat.id ? cat.color : "#2a2a2a"}`, color: form.tipo===cat.id ? "#fff" : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
+              style={{ flex:1, background: form.tipo===cat.id ? cat.color : "#0e0e0e", border:`1px solid ${form.tipo===cat.id ? cat.color : "#2a2a2a"}`, color: form.tipo===cat.id ? textColorFor(cat.color) : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
               onClick={() => set("tipo", cat.id)}>
               {cat.name}
             </button>
