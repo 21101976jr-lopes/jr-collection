@@ -789,7 +789,9 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
 export default function App() {
   const [records, setRecords] = useState(() => loadRecords() || DEMO_DATA);
   const [categories, setCategories] = useState(() => loadCategories());
-  const [filterCat, setFilterCat] = useState(null); // null = all
+  const [filterCat, setFilterCat] = useState(null);
+  const [sortBy, setSortBy] = useState("cat_alpha"); // cat_alpha | alpha_az | alpha_za | year_new | year_old
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [showCatManager, setShowCatManager] = useState(false);
   const { playing, loading, searchAndPlay, stop } = useDeezerPreview();
   const [coversLoaded, setCoversLoaded] = useState(false);
@@ -847,7 +849,19 @@ export default function App() {
         r.tracks.some(t => t.toLowerCase().includes(q))
       );
     }).sort((a, b) => {
-      // Sort by category order, then alphabetically
+      if (sortBy === "year_new") return (b.year||0) - (a.year||0);
+      if (sortBy === "year_old") return (a.year||0) - (b.year||0);
+      if (sortBy === "alpha_za") {
+        const cmp = (a.artist||"").localeCompare(b.artist||"", "pt-BR", {sensitivity:"base"});
+        if (cmp !== 0) return -cmp;
+        return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"}) * -1;
+      }
+      if (sortBy === "alpha_az") {
+        const cmp = (a.artist||"").localeCompare(b.artist||"", "pt-BR", {sensitivity:"base"});
+        if (cmp !== 0) return cmp;
+        return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
+      }
+      // default: cat_alpha — by category order then alphabetically
       const catIds = categories.map(c => c.id);
       const ta = catIds.indexOf(a.tipo || catIds[0]);
       const tb = catIds.indexOf(b.tipo || catIds[0]);
@@ -856,7 +870,7 @@ export default function App() {
       if (artistCmp !== 0) return artistCmp;
       return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
     });
-  }, [query, records, filterArtist, filterTrack, filterCat, categories]);
+  }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy]);
 
   const matchedTracks = (r) => {
     // Priority: if music filter active, show tracks matching music term
@@ -1029,6 +1043,30 @@ export default function App() {
           <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
             <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("grid")}>⊞</button>
             <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("list")}>≡</button>
+          </div>
+          <div style={{ position:"relative" }}>
+            <button
+              style={{ background: sortBy!=="cat_alpha"?"#1a3a5a":"transparent", border:`1px solid ${sortBy!=="cat_alpha"?"#5EEDED55":"#222"}`, color: sortBy!=="cat_alpha"?"#5EEDED":"#666", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", whiteSpace:"nowrap" }}
+              onClick={() => setShowSortMenu(s => !s)}>
+              {sortBy==="cat_alpha"?"↕ Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}
+            </button>
+            {showSortMenu && (
+              <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:8, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
+                {[
+                  ["cat_alpha","↕ Categoria + A→Z"],
+                  ["alpha_az","A → Z"],
+                  ["alpha_za","Z → A"],
+                  ["year_new","Ano: mais novo"],
+                  ["year_old","Ano: mais antigo"],
+                ].map(([val, label]) => (
+                  <button key={val}
+                    style={{ display:"block", width:"100%", textAlign:"left", background: sortBy===val?"#c0392b22":"transparent", border:"none", borderBottom:"1px solid #1a1a1a", color: sortBy===val?"#c0392b":"#aaa", padding:"11px 16px", cursor:"pointer", fontSize:13, fontFamily:"monospace" }}
+                    onClick={() => { setSortBy(val); setShowSortMenu(false); }}>
+                    {sortBy===val ? "✓ " : "   "}{label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
