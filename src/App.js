@@ -831,14 +831,13 @@ export default function App() {
     return records.filter(r => {
       // Category button filter
       if (filterCat && r.tipo !== filterCat) return false;
-      // Cantor/Banda filter
+      // Cantor/Banda filter — busca APENAS no artista e nome do disco
       if (fa) {
         const inArtist = r.artist.toLowerCase().includes(fa);
         const inAlbum  = r.album.toLowerCase().includes(fa);
-        const inTracks = r.tracks.some(t => t.toLowerCase().includes(fa));
-        if (!inArtist && !inAlbum && !inTracks) return false;
+        if (!inArtist && !inAlbum) return false;
       }
-      // Música filter
+      // Música filter — busca APENAS nas faixas
       if (ft && !r.tracks.some(t => t.toLowerCase().includes(ft))) return false;
       // General search
       if (!q) return true;
@@ -873,16 +872,15 @@ export default function App() {
   }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy]);
 
   const matchedTracks = (r) => {
-    // Priority: if music filter active, show tracks matching music term
-    // If only artist filter, show tracks matching artist (for compilations)
-    // If general search, show tracks matching query
-    const term = filterTrack || (filterArtist && !filterTrack ? filterArtist : "") || query;
+    // Only show matched tracks for music filter or general search
+    // NOT for artist filter (artist filter works on disc level, not track level)
+    const term = filterTrack || query;
     if (!term.trim()) return [];
     return r.tracks.filter(t => t.toLowerCase().includes(term.toLowerCase()));
   };
 
-  // The highlight term: prefer music filter, then general query, then artist
-  const hlTerm = filterTrack || query || filterArtist;
+  // Highlight term: music filter or general query only
+  const hlTerm = filterTrack || query;
 
   const Hl = ({ text }) => {
     const q = hlTerm.toLowerCase();
