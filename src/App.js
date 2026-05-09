@@ -831,14 +831,29 @@ export default function App() {
     return records.filter(r => {
       // Category button filter
       if (filterCat && r.tipo !== filterCat) return false;
-      // Cantor/Banda filter — busca APENAS no artista e nome do disco
+      // Artista/Disco filter — busca no nome do artista e título do álbum
+      // Para coletâneas também busca na parte do artista de cada faixa ("Artista - Música")
       if (fa) {
         const inArtist = r.artist.toLowerCase().includes(fa);
         const inAlbum  = r.album.toLowerCase().includes(fa);
-        if (!inArtist && !inAlbum) return false;
+        // In compilations, also check artist part of tracks ("Artist - Song")
+        const inTrackArtist = r.tracks.some(t => {
+          const parts = t.split(" - ");
+          return parts.length > 1 && parts[0].toLowerCase().includes(fa);
+        });
+        if (!inArtist && !inAlbum && !inTrackArtist) return false;
       }
-      // Música filter — busca APENAS nas faixas
-      if (ft && !r.tracks.some(t => t.toLowerCase().includes(ft))) return false;
+      // Música filter — busca APENAS no título da música, ignorando o artista
+      // Para "Elton John - I Don't Want...", busca só em "I Don't Want..."
+      if (ft) {
+        const hasMatch = r.tracks.some(t => {
+          const parts = t.split(" - ");
+          // If format is "Artist - Song", search only in song part
+          const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
+          return songPart.toLowerCase().includes(ft);
+        });
+        if (!hasMatch) return false;
+      }
       // General search
       if (!q) return true;
       return (
@@ -872,15 +887,27 @@ export default function App() {
   }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy]);
 
   const matchedTracks = (r) => {
-    // Only show matched tracks for music filter or general search
-    // NOT for artist filter (artist filter works on disc level, not track level)
+    if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
+      // Artist filter: show tracks where artist part matches (for compilations)
+      return r.tracks.filter(t => {
+        const parts = t.split(" - ");
+        return parts.length > 1 && parts[0].toLowerCase().includes(filterArtist.toLowerCase());
+      });
+    }
     const term = filterTrack || query;
     if (!term.trim()) return [];
+    if (filterTrack.trim()) {
+      // Music filter: show tracks where SONG part matches (not artist part)
+      return r.tracks.filter(t => {
+        const parts = t.split(" - ");
+        const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
+        return songPart.toLowerCase().includes(term.toLowerCase());
+      });
+    }
     return r.tracks.filter(t => t.toLowerCase().includes(term.toLowerCase()));
   };
 
-  // Highlight term: music filter or general query only
-  const hlTerm = filterTrack || query;
+  const hlTerm = filterTrack || filterArtist || query;
 
   const Hl = ({ text }) => {
     const q = hlTerm.toLowerCase();
