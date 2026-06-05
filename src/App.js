@@ -345,7 +345,7 @@ function ScanOverlay({ onClose, onDetected }) {
     try {
       const body = manual
         ? { manualQuery: manual }
-        : { imageBase64: imageBase64.split(",")[1] };
+        : { imageBase64: imageBase64.split(",")[1], useGemini };
 
       const res = await fetch("/api/scan", {
         method: "POST",
@@ -423,6 +423,12 @@ function ScanOverlay({ onClose, onDetected }) {
           </div>
           <canvas ref={canvasRef} style={{ display:"none" }}/>
           <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"4px solid #fff", cursor:"pointer", fontSize:32, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={snap}>📷</button>
+          <button
+            style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:20, padding:"7px 18px", cursor:"pointer", fontSize:13, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}
+            onClick={() => setUseGemini(g => !g)}
+            title="Usar Gemini para capas difíceis ou sem texto">
+            🧠 {useGemini ? "Gemini ativado" : "Usar IA Avançada"}
+          </button>
           <button style={btn(false)} onClick={() => fileRef.current.click()}>📁 Usar foto da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
@@ -438,9 +444,15 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="preview" && (<>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#666", textAlign:"center" }}>A foto ficou boa?</p>
           <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:8, border:"2px solid #1e1e1e" }}/>
-          <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center" }}>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
             <button style={btn(false)} onClick={retry}>↩ Tirar outra</button>
-            <button style={btn(true)} onClick={() => analyze(preview, null)}>🔍 Identificar disco</button>
+            <button style={btn(true)} onClick={() => analyze(preview, null)}>🔍 Identificar</button>
+            <button
+              style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              onClick={() => { setUseGemini(true); analyze(preview, null); }}
+              title="Usar Gemini — melhor para capas sem texto">
+              🧠 IA Avançada
+            </button>
           </div>
         </>)}
 
@@ -455,6 +467,7 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
             {result.foundOnDiscogs===false ? "⚠ Identificado pela IA (não encontrado no Discogs)" : "✓ Disco identificado!"}
+            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px" }}>🧠 Gemini</span>}
           </p>
           {errMsg && result.foundOnDiscogs===false && (
             <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:12, textAlign:"center", maxWidth:420, lineHeight:1.6 }}>{errMsg}</p>
