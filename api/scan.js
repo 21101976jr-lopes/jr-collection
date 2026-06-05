@@ -6,14 +6,14 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { imageBase64, manualQuery, discogsId } = req.body;
+    const { imageBase64, manualQuery, discogsId, useGemini } = req.body;
 
     const discogsHeaders = {
       "User-Agent": "JrCollectionApp/1.0",
       "Authorization": `Discogs token=${process.env.DISCOGS_TOKEN}`
     };
 
-    // ── Path 1: Fetch directly by Discogs ID ──────────────────────────────
+    // ── Path 1: Fetch directly by Discogs ID ─────────────────────────────
     if (discogsId) {
       const r = await (await fetch(`https://api.discogs.com/releases/${discogsId}`, { headers: discogsHeaders })).json();
       const tracks = (r.tracklist||[]).filter(t=>t.type_==="track").map(t=>{
@@ -31,25 +31,84 @@ export default async function handler(req, res) {
 
     // ── Path 2: AI image recognition ─────────────────────────────────────
     let aiResult = null;
+
     if (!manualQuery) {
       if (!imageBase64) return res.status(400).json({ error: "Imagem não enviada" });
-      const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.REACT_APP_ANTHROPIC_KEY,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1200,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageBase64 } },
-              { type: "text", text: `Você é um especialista em discos de vinil com foco especial em música brasileira: sertanejo, MPB, novelas, axé, pagode, forró, e também rock/pop internacional.
 
-Analise MUITO CUIDADOSAMENTE esta capa de disco de vinil. Leia CADA PALAVRA visível na imagem.
+      if (useGemini) {
+        // ── Gemini Flash — melhor para capas sem texto ou artísticas ──────
+        try {
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [
+                    {
+                      inline_data: {
+                        mime_type: "image/jpeg",
+                        data: imageBase64
+                      }
+                    },
+                    {
+                      text: `Você é um especialista em discografia mundial e brasileira. Analise esta capa de disco de vinil com máximo detalhe visual — cores, formas, rostos, elementos gráficos, estilo da época, e qualquer texto visível.
+
+Retorne SOMENTE JSON válido sem markdown:
+{
+  "artist": "Nome exato do artista",
+  "album": "Nome exato do álbum",
+  "year": 1985,
+  "genre": "Gênero musical",
+  "label": "Gravadora",
+  "tracks": [],
+  "confidence": "high|medium|low",
+  "visibleText": "todo texto visível na capa",
+  "visualClues": "descrição dos elementos visuais que ajudaram na identificação"
+}
+
+Se não conseguir identificar: {"error":"não identificado"}`
+                    }
+                  ]
+                }],
+                generationConfig: { temperature: 0.1, maxOutputTokens: 1000 }
+              })
+            }
+          );
+          const geminiData = await geminiRes.json();
+          const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+          if (raw) {
+            const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+            if (!parsed.error) {
+              aiResult = { ...parsed, usedGemini: true };
+            }
+          }
+        } catch(e) {
+          console.error("Gemini error:", e.message);
+        }
+      }
+
+      // ── Claude — padrão, bom para texto legível ───────────────────────
+      if (!aiResult) {
+        try {
+          const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.REACT_APP_ANTHROPIC_KEY,
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 1000,
+              messages: [{
+                role: "user",
+                content: [
+                  { type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageBase64 } },
+                  { type: "text", text: `Você é um especialista em discos de vinil com foco especial em música brasileira: sertanejo, MPB, novelas, axé, pagode, forró, e também rock/pop internacional.
+
+Analise MUITO CUIDADOSAMENTE esta capa. Leia CADA PALAVRA visível.
 
 Retorne SOMENTE JSON válido (sem markdown):
 {
@@ -58,41 +117,40 @@ Retorne SOMENTE JSON válido (sem markdown):
   "year": 1985,
   "genre": "Gênero musical",
   "label": "Gravadora se visível",
-  "tracks": ["liste músicas se visíveis na capa, senão deixe vazio"],
+  "tracks": [],
   "confidence": "high|medium|low",
   "visibleText": "TODO texto que você consegue ler na capa"
 }
 
 Se não conseguir identificar nada: {"error":"não identificado"}` }
-            ]
-          }]
-        })
-      });
-      const aiData = await aiRes.json();
-      const raw = aiData.content?.map(b=>b.text||"").join("").trim();
-      try {
-        const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
-        if (parsed.error) {
-          return res.status(200).json({ error:"não identificado", needsManualSearch:true });
+                ]
+              }]
+            })
+          });
+          const aiData = await aiRes.json();
+          const raw = aiData.content?.map(b=>b.text||"").join("").trim();
+          const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
+          if (!parsed.error) aiResult = parsed;
+        } catch(e) {
+          console.error("Claude error:", e.message);
         }
-        aiResult = parsed;
-      } catch {
+      }
+
+      if (!aiResult) {
         return res.status(200).json({ error:"não identificado", needsManualSearch:true });
       }
     }
 
-    // ── Path 3: Search Discogs with multiple strategies ───────────────────
+    // ── Search Discogs with multiple strategies ───────────────────────────
     const artist = manualQuery ? "" : (aiResult.artist||"");
     const album  = manualQuery ? manualQuery : (aiResult.album||"");
 
-    // Build multiple search queries to maximize chances of finding Brazilian music
     const queries = manualQuery
       ? [manualQuery]
       : [
-          `${artist} ${album}`,           // full query
-          album,                           // album only
-          artist,                          // artist only
-          // Remove common words that confuse search
+          `${artist} ${album}`,
+          album,
+          artist,
           `${artist} ${album}`.replace(/internacional|nacional|trilha|sonora|vol\.|volume/gi,"").trim(),
         ].filter((q,i,arr) => q.trim().length > 2 && arr.indexOf(q) === i);
 
@@ -122,7 +180,6 @@ Se não conseguir identificar nada: {"error":"não identificado"}` }
           }
         }
 
-        // Fetch full details of first new result
         if (!bestRelease && results.length > 0) {
           const rel = await (await fetch(
             `https://api.discogs.com/releases/${results[0].id}`,
@@ -135,15 +192,12 @@ Se não conseguir identificar nada: {"error":"não identificado"}` }
 
     discogsResults = discogsResults.slice(0, 5);
 
-    // ── Build final response ──────────────────────────────────────────────
     if (bestRelease) {
-      // Discogs found something — merge with AI result
       const tracks = (bestRelease.tracklist||[]).filter(t=>t.type_==="track").map(t=>{
         const a = t.artists?.map(a=>a.name.replace(/\s*\(\d+\)$/,"")).join(", ");
         return a ? `${a} - ${t.title}` : t.title;
       });
-      const coverUrl = bestRelease.images?.[0]?.uri
-        || (discogsResults[0]?.cover || null);
+      const coverUrl = bestRelease.images?.[0]?.uri || (discogsResults[0]?.cover || null);
 
       return res.status(200).json({
         artist: bestRelease.artists_sort || aiResult?.artist || "",
@@ -156,9 +210,9 @@ Se não conseguir identificar nada: {"error":"não identificado"}` }
         confidence: aiResult?.confidence || "medium",
         discogsResults,
         foundOnDiscogs: true,
+        usedGemini: aiResult?.usedGemini || false,
       });
     } else {
-      // Discogs found nothing — return AI result so user doesn't lose data
       return res.status(200).json({
         artist: aiResult?.artist || "",
         album:  aiResult?.album  || "",
@@ -171,6 +225,7 @@ Se não conseguir identificar nada: {"error":"não identificado"}` }
         discogsResults: [],
         foundOnDiscogs: false,
         needsManualSearch: true,
+        usedGemini: aiResult?.usedGemini || false,
       });
     }
 
