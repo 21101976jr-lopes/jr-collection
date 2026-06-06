@@ -315,6 +315,7 @@ function ScanOverlay({ onClose, onDetected }) {
   const [manualQuery, setManualQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [altResults, setAltResults] = useState([]);
+  const [useGemini, setUseGemini] = useState(false);
 
   const startCam = useCallback(async () => {
     try {
@@ -820,17 +821,23 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
 
-  // Load covers from IndexedDB on startup and merge into records
+  // Load covers from IndexedDB on startup — lazy, in small batches
   useEffect(() => {
-    dbGetAllCovers().then(covers => {
-      if (Object.keys(covers).length > 0) {
-        setRecords(prev => prev.map(r => ({
-          ...r,
-          coverPhoto: covers[String(r.id)] || r.coverPhoto || null
-        })));
-      }
+    const loadCoversLazy = async () => {
+      try {
+        const covers = await dbGetAllCovers();
+        if (Object.keys(covers).length > 0) {
+          setRecords(prev => prev.map(r => ({
+            ...r,
+            coverPhoto: covers[String(r.id)] || r.coverPhoto || null
+          })));
+        }
+      } catch {}
       setCoversLoaded(true);
-    });
+    };
+    // Small delay so app renders first, then loads covers
+    const timer = setTimeout(loadCoversLazy, 100);
+    return () => clearTimeout(timer);
   }, []);
 
   // Save catalog (text only) whenever records change
