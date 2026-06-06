@@ -340,12 +340,13 @@ function ScanOverlay({ onClose, onDetected }) {
     r.readAsDataURL(file);
   };
 
-  const analyze = async (imageBase64, manual) => {
+  const analyze = async (imageBase64, manual, forceGemini) => {
     setPhase("analyzing");
+    const gemini = forceGemini !== undefined ? forceGemini : useGemini;
     try {
       const body = manual
         ? { manualQuery: manual }
-        : { imageBase64: imageBase64.split(",")[1], useGemini };
+        : { imageBase64: imageBase64.split(",")[1], useGemini: gemini };
 
       const res = await fetch("/api/scan", {
         method: "POST",
@@ -449,7 +450,7 @@ function ScanOverlay({ onClose, onDetected }) {
             <button style={btn(true)} onClick={() => analyze(preview, null)}>🔍 Identificar</button>
             <button
               style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
-              onClick={() => { setUseGemini(true); analyze(preview, null); }}
+              onClick={() => { setUseGemini(true); analyze(preview, null, true); }}
               title="Usar Gemini — melhor para capas sem texto">
               🧠 IA Avançada
             </button>
