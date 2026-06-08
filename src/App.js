@@ -77,11 +77,25 @@ const dbGetAllCovers = async () => {
       const tx = db.transaction("covers", "readonly");
       const store = tx.objectStore("covers");
       const result = {};
-      store.openCursor().onsuccess = e => {
-        const cursor = e.target.result;
-        if (cursor) { result[cursor.key] = cursor.value; cursor.continue(); }
-        else resolve(result);
+      // Get all keys and values in parallel — much faster than cursor
+      const keysReq = store.getAllKeys();
+      const valsReq = store.getAll();
+      let keys, vals;
+      keysReq.onsuccess = () => {
+        keys = keysReq.result;
+        if (vals !== undefined) {
+          keys.forEach((k, i) => { result[String(k)] = vals[i]; });
+          resolve(result);
+        }
       };
+      valsReq.onsuccess = () => {
+        vals = valsReq.result;
+        if (keys !== undefined) {
+          keys.forEach((k, i) => { result[String(k)] = vals[i]; });
+          resolve(result);
+        }
+      };
+      tx.onerror = () => resolve({});
     });
   } catch { return {}; }
 };
@@ -411,7 +425,7 @@ function ScanOverlay({ onClose, onDetected }) {
     <div style={{ position:"fixed", inset:0, background:"#000", zIndex:1000, display:"flex", flexDirection:"column", fontFamily:"'Georgia',serif" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}><VinylSVG size={24}/><span style={{ fontSize:14, fontFamily:"monospace", letterSpacing:2, color:"#888", textTransform:"uppercase" }}>Escanear capa</span></div>
-        <button style={{ background:"#f0c030", border:"2px solid #f0c030", color:"#111", borderRadius:6, padding:"9px 20px", cursor:"pointer", fontSize:15, fontFamily:"monospace", fontWeight:"bold", letterSpacing:1 }} onClick={() => { stopCam(); onClose(); }}>✕ FECHAR</button>
+        <button style={{ background:"transparent", border:"1px solid #333", color:"#777", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={() => { stopCam(); onClose(); }}>✕ Fechar</button>
       </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
@@ -821,23 +835,17 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
 
-  // Load covers from IndexedDB on startup — lazy, in small batches
+  // Load covers from IndexedDB immediately on startup
   useEffect(() => {
-    const loadCoversLazy = async () => {
-      try {
-        const covers = await dbGetAllCovers();
-        if (Object.keys(covers).length > 0) {
-          setRecords(prev => prev.map(r => ({
-            ...r,
-            coverPhoto: covers[String(r.id)] || r.coverPhoto || null
-          })));
-        }
-      } catch {}
+    dbGetAllCovers().then(covers => {
+      if (Object.keys(covers).length > 0) {
+        setRecords(prev => prev.map(r => ({
+          ...r,
+          coverPhoto: covers[String(r.id)] || r.coverPhoto || null
+        })));
+      }
       setCoversLoaded(true);
-    };
-    // Small delay so app renders first, then loads covers
-    const timer = setTimeout(loadCoversLazy, 100);
-    return () => clearTimeout(timer);
+    }).catch(() => setCoversLoaded(true));
   }, []);
 
   // Save catalog (text only) whenever records change
@@ -1019,7 +1027,7 @@ export default function App() {
           <div>
             <h1 style={{ fontSize:32, fontWeight:"normal", letterSpacing:3, color:"#f0ece4", margin:"0 0 3px" }}>Jr Collection</h1>
             <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:3, textTransform:"uppercase" }}>Discos-LP</div>
-            <div style={{ fontSize:13, color:"#aaa", letterSpacing:1, fontFamily:"monospace", marginTop:2 }}>{records.length} disco{records.length!==1?"s":""} no catálogo</div>
+            <div style={{ fontSize:13, color:"#555", letterSpacing:1, fontFamily:"monospace", marginTop:2 }}>{records.length} disco{records.length!==1?"s":""} no catálogo</div>
           </div>
         </div>
         {view==="catalog" && !selected && (
@@ -1204,7 +1212,7 @@ export default function App() {
       {view==="detail" && selected && (
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
-            <button style={{ background:"#f0c030", border:"2px solid #f0c030", color:"#111", borderRadius:6, padding:"10px 22px", cursor:"pointer", fontSize:15, fontFamily:"monospace", fontWeight:"bold", letterSpacing:1 }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
+            <button style={{ background:"transparent", border:"1px solid #1e1e1e", color:"#666", borderRadius:4, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:4, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               ✏️ Editar disco
