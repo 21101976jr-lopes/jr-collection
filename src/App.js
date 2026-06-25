@@ -3,7 +3,97 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 const STORAGE_KEY = "jr-collection-records";
 const CATS_KEY = "jr-collection-categories";
 
-// Returns black or white depending on background color luminance
+// ── Flat outline icon set (inherits color via currentColor) ────────────────
+const Icon = {
+  Search: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  ),
+  Camera: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+  ),
+  Grid: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+  ),
+  List: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+  ),
+  Plus: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  ),
+  Mic: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+  ),
+  Music: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  ),
+  Pin: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+  ),
+  Vinyl: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="1" fill={color||"currentColor"}/></svg>
+  ),
+  Calendar: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  ),
+  Tag: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20.59 13.41 11 4H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82z"/><line x1="7.5" y1="7.5" x2="7.5" y2="7.5" strokeWidth="3"/></svg>
+  ),
+  Person: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg>
+  ),
+  People: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="7" r="3.5"/><path d="M3.5 20v-1.5A5.5 5.5 0 0 1 9 13a5.5 5.5 0 0 1 5.5 5.5V20"/><circle cx="17" cy="8" r="3"/><path d="M14.5 13.2A4.5 4.5 0 0 1 20.5 17v3"/></svg>
+  ),
+  Book: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4.5A2.5 2.5 0 0 1 4.5 2H11v18H4.5A2.5 2.5 0 0 1 2 17.5z"/><path d="M22 4.5A2.5 2.5 0 0 0 19.5 2H13v18h6.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg>
+  ),
+  Image: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+  ),
+  Save: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+  ),
+  Folder: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+  ),
+  Edit: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
+  ),
+  Trash: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+  ),
+  Play: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color||"currentColor"} stroke="none"><polygon points="6 4 20 12 6 20"/></svg>
+  ),
+  Pause: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color||"currentColor"} stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+  ),
+  Close: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2.4" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  ),
+  Sort: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="20" x2="6" y2="4"/><polyline points="3 7 6 4 9 7"/><line x1="18" y1="4" x2="18" y2="20"/><polyline points="15 17 18 20 21 17"/></svg>
+  ),
+  Brain: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2a3 3 0 0 0-3 3v.3A3.5 3.5 0 0 0 4 8.5 3.5 3.5 0 0 0 5.8 11.6 3 3 0 0 0 5 14a3 3 0 0 0 1.5 2.6A3 3 0 0 0 9.5 21a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3z"/><path d="M14.5 2a3 3 0 0 1 3 3v.3a3.5 3.5 0 0 1 2.5 3.2 3.5 3.5 0 0 1-1.8 3.1A3 3 0 0 1 19 14a3 3 0 0 1-1.5 2.6A3 3 0 0 1 14.5 21a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z"/></svg>
+  ),
+  Sparkle: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
+  ),
+  Clock: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  ),
+  Warning: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+  ),
+  Shield: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+  ),
+  Settings: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  ),
+};
+
 const textColorFor = (hex) => {
   const r = parseInt(hex.slice(1,3),16);
   const g = parseInt(hex.slice(3,5),16);
@@ -307,9 +397,9 @@ const PhotoPicker = ({ value, onChange }) => {
         : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 8, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>💿</div>
       }
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button type="button" style={pBtn} onClick={() => camRef.current.click()}>📷 Câmera</button>
-        <button type="button" style={pBtn} onClick={() => fileRef.current.click()}>🖼 Galeria</button>
-        {value && <button type="button" style={{ ...pBtn, color: "#e74c3c", borderColor: "#e74c3c44" }} onClick={() => onChange(null)}>✕ Remover</button>}
+        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => camRef.current.click()}><Icon.Camera size={14} /> Câmera</button>
+        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => fileRef.current.click()}><Icon.Image size={14} /> Galeria</button>
+        {value && <button type="button" style={{ ...pBtn, color: "#e74c3c", borderColor: "#e74c3c44", display:"flex", alignItems:"center", gap:7, justifyContent:"center" }} onClick={() => onChange(null)}><Icon.Close size={12} /> Remover</button>}
       </div>
       <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => onChange(ev.target.result); r.readAsDataURL(f); }} />
       <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => onChange(ev.target.result); r.readAsDataURL(f); }} />
@@ -425,7 +515,7 @@ function ScanOverlay({ onClose, onDetected }) {
     <div style={{ position:"fixed", inset:0, background:"#000", zIndex:1000, display:"flex", flexDirection:"column", fontFamily:"'Georgia',serif" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}><VinylSVG size={24}/><span style={{ fontSize:14, fontFamily:"monospace", letterSpacing:2, color:"#888", textTransform:"uppercase" }}>Escanear capa</span></div>
-        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={() => { stopCam(); onClose(); }}>✕ Fechar</button>
+        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }} onClick={() => { stopCam(); onClose(); }}><Icon.Close size={13} /> Fechar</button>
       </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
@@ -438,21 +528,21 @@ function ScanOverlay({ onClose, onDetected }) {
             {[{top:8,left:8,borderTop:rb,borderLeft:rb},{top:8,right:8,borderTop:rb,borderRight:rb},{bottom:8,left:8,borderBottom:rb,borderLeft:rb},{bottom:8,right:8,borderBottom:rb,borderRight:rb}].map((s,i)=><div key={i} style={{ position:"absolute", width:24, height:24, ...s }}/>)}
           </div>
           <canvas ref={canvasRef} style={{ display:"none" }}/>
-          <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"4px solid #fff", cursor:"pointer", fontSize:32, display:"flex", alignItems:"center", justifyContent:"center" }} onClick={snap}>📷</button>
+          <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"4px solid #fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }} onClick={snap}><Icon.Camera size={32} /></button>
           <button
             style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:20, padding:"7px 18px", cursor:"pointer", fontSize:13, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}
             onClick={() => setUseGemini(g => !g)}
             title="Usar Gemini para capas difíceis ou sem texto">
-            🧠 {useGemini ? "Gemini ativado" : "Usar IA Avançada"}
+            <Icon.Brain size={14} /> {useGemini ? "Gemini ativado" : "Usar IA Avançada"}
           </button>
-          <button style={btn(false)} onClick={() => fileRef.current.click()}>📁 Usar foto da galeria</button>
+          <button style={btn(false)} onClick={() => fileRef.current.click()}><Icon.Image size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Usar foto da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
 
         {phase==="camera" && camErr && (<>
           <div style={{ fontSize:52 }}>📷</div>
           <p style={{ fontFamily:"monospace", fontSize:15, color:"#666", lineHeight:1.7, textAlign:"center" }}>Câmera não disponível.<br/>Use uma foto da galeria.</p>
-          <button style={btn(true)} onClick={() => fileRef.current.click()}>📁 Escolher da galeria</button>
+          <button style={btn(true)} onClick={() => fileRef.current.click()}><Icon.Image size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Escolher da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
 
@@ -467,7 +557,7 @@ function ScanOverlay({ onClose, onDetected }) {
               style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setUseGemini(true); analyze(preview, null, true); }}
               title="Usar Gemini — melhor para capas sem texto">
-              🧠 IA Avançada
+              <Icon.Brain size={14} /> IA Avançada
             </button>
           </div>
         </>)}
@@ -483,7 +573,7 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
             {result.foundOnDiscogs===false ? "⚠ Identificado pela IA (não encontrado no Discogs)" : "✓ Disco identificado!"}
-            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px" }}>🧠 Gemini</span>}
+            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={11} /> Gemini</span>}
           </p>
           {errMsg && result.foundOnDiscogs===false && (
             <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:12, textAlign:"center", maxWidth:420, lineHeight:1.6 }}>{errMsg}</p>
@@ -661,7 +751,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
     <div style={{ padding: 18, maxWidth: 480 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ fontWeight: "normal", letterSpacing: 2, fontSize: 18, textTransform: "uppercase", margin: 0 }}>{title}</h2>
-        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold" }} onClick={onCancel}>✕ Cancelar</button>
+        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={13} /> Cancelar</button>
       </div>
 
       {/* Discogs search block */}
@@ -727,13 +817,18 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Tipo de disco</label>
         <div style={{ display:"flex", gap:8 }}>
-          {categories.map(cat => (
-            <button key={cat.id} type="button"
-              style={{ flex:1, background: form.tipo===cat.id ? cat.color : "#0e0e0e", border:`1px solid ${form.tipo===cat.id ? cat.color : "#2a2a2a"}`, color: form.tipo===cat.id ? textColorFor(cat.color) : "#888", borderRadius:6, padding:"10px 4px", cursor:"pointer", fontSize:12, fontFamily:"monospace", textAlign:"center" }}
-              onClick={() => set("tipo", cat.id)}>
-              {cat.name}
-            </button>
-          ))}
+          {categories.map(cat => {
+            const CatIcon = cat.id==="banda" ? Icon.Person : cat.id==="novela" ? Icon.Book : cat.id==="coletanea" ? Icon.People : Icon.Tag;
+            const active = form.tipo===cat.id;
+            return (
+              <button key={cat.id} type="button"
+                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6, background: active ? cat.color : "#0e0e0e", border:`1px solid ${active ? cat.color : "#2a2a2a"}`, color: active ? textColorFor(cat.color) : "#888", borderRadius:8, padding:"12px 4px", cursor:"pointer", fontSize:11, fontFamily:"monospace", textAlign:"center" }}
+                onClick={() => set("tipo", cat.id)}>
+                <CatIcon size={20} />
+                <span>{cat.name}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -742,27 +837,36 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <PhotoPicker value={form.coverPhoto} onChange={v => set("coverPhoto", v)} />
       </div>
 
-      {[["artist","Artista / Banda"],["album","Nome do Álbum"],["year","Ano"],["genre","Gênero musical"],["label","Gravadora"]].map(([f,l]) => (
+      {[["artist","Artista / Banda", Icon.Person],["album","Nome do Álbum", Icon.Vinyl],["year","Ano", Icon.Calendar],["genre","Gênero musical", Icon.Music],["label","Gravadora", Icon.Vinyl]].map(([f,l,FIcon]) => (
         <div key={f} style={{ marginBottom: 14 }}>
           <label style={lStyle}>{l}</label>
-          <input style={fStyle} value={form[f]} onChange={e => set(f, e.target.value)} />
+          <div style={{ position:"relative" }}>
+            <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><FIcon size={16} /></span>
+            <input style={{ ...fStyle, paddingLeft:38 }} value={form[f]} onChange={e => set(f, e.target.value)} />
+          </div>
         </div>
       ))}
 
       <div style={{ marginBottom: 16 }}>
         <label style={lStyle}>Faixas (uma por linha)</label>
-        <textarea style={{ ...fStyle, height: 140, resize: "vertical" }} placeholder={"Faixa 1\nFaixa 2\nFaixa 3"} value={form.tracks} onChange={e => set("tracks", e.target.value)} />
+        <div style={{ position:"relative" }}>
+          <span style={{ position:"absolute", left:12, top:14, color:"#555", display:"flex", pointerEvents:"none" }}><Icon.List size={16} /></span>
+          <textarea style={{ ...fStyle, height: 140, resize: "vertical", paddingLeft:38 }} placeholder={"Faixa 1\nFaixa 2\nFaixa 3"} value={form.tracks} onChange={e => set("tracks", e.target.value)} />
+        </div>
       </div>
 
       {/* Location field */}
       <div style={{ marginBottom: 16 }}>
-        <label style={lStyle}>📍 Localização (onde está o disco)</label>
-        <input
-          style={fStyle}
-          placeholder="Ex: Armário 1, Estante porta, Nacionais, Sala..."
-          value={form.location||""}
-          onChange={e => set("location", e.target.value)}
-        />
+        <label style={{ ...lStyle, display:"flex", alignItems:"center", gap:6 }}><Icon.Pin size={13} color="#c0392b" /> Localização (onde está o disco)</label>
+        <div style={{ position:"relative" }}>
+          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><Icon.Pin size={16} /></span>
+          <input
+            style={{ ...fStyle, paddingLeft:38 }}
+            placeholder="Ex: Armário 1, Estante porta, Nacionais, Sala..."
+            value={form.location||""}
+            onChange={e => set("location", e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Wash status selector */}
@@ -770,9 +874,9 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <label style={lStyle}>Status de lavagem</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {[
-            { key: "green", label: "Lavado recentemente (menos de 1 ano)", color: "#2ecc71" },
-            { key: "yellow", label: "Lavado há mais de 1 ano", color: "#f39c12" },
-            { key: "red", label: "Nunca lavado / sem registro", color: "#e74c3c" },
+            { key: "green", label: "Lavado recentemente (menos de 1 ano)", color: "#2ecc71", Ico: Icon.Sparkle },
+            { key: "yellow", label: "Lavado há mais de 1 ano", color: "#f39c12", Ico: Icon.Clock },
+            { key: "red", label: "Nunca lavado / sem registro", color: "#e74c3c", Ico: Icon.Warning },
           ].map(opt => {
             const m = monthsAgo(form.washedDate);
             const isSelected = opt.key === "green" ? (form.washed && m <= 12) : opt.key === "yellow" ? (form.washed && m > 12) : !form.washed;
@@ -784,6 +888,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                   else { set("washed", false); set("washedDate", ""); }
                 }} style={{ accentColor: opt.color }} />
                 <span style={{ width: 14, height: 14, borderRadius: "50%", background: opt.color, boxShadow: `0 0 6px ${opt.color}`, display: "inline-block", flexShrink: 0 }} />
+                <opt.Ico size={15} color={opt.color} />
                 <span style={{ fontSize: 15, color: "#ddd", fontFamily: "monospace" }}>{opt.label}</span>
               </label>
             );
@@ -1005,7 +1110,7 @@ export default function App() {
     setSelected(null); setView("catalog"); showToast("Disco removido.");
   };
 
-  const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#222"}`, color: active ? "#fff" : "#777", borderRadius: 4, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1 });
+  const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#222"}`, color: active ? "#fff" : "#777", borderRadius: 4, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 });
 
   return (
     <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden" }}>
@@ -1040,16 +1145,16 @@ export default function App() {
 
       {/* Nav */}
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
-        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}>▤ CATÁLOGO</button>
-        <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}>+ MANUAL</button>
-        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}>📷 ESCANEAR</button>
+        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={14} /> CATÁLOGO</button>
+        <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={14} /> MANUAL</button>
+        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={14} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#444" }}>{results.length} disco{results.length!==1?"s":""}</span>}
         <button style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
           onClick={() => exportCatalog(records)} title="Exportar backup">
-          💾
+          <Icon.Save size={14} />
         </button>
-        <label style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} title="Importar backup">
-          📂
+        <label style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center" }} title="Importar backup">
+          <Icon.Folder size={14} />
           <input type="file" accept=".json" style={{ display:"none" }} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
             try {
@@ -1088,21 +1193,27 @@ export default function App() {
           {categories.map(cat => (
             <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?textColorFor(cat.color):"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
           ))}
-          <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #222", color:"#555", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace" }} onClick={() => setShowCatManager(true)}>✏️ categorias</button>
+          <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #222", color:"#555", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace", display:"flex", alignItems:"center", gap:5 }} onClick={() => setShowCatManager(true)}><Icon.Edit size={12} /> categorias</button>
         </div>
 
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
-          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎤 Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
-          <input style={{ background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px", fontSize:15, fontFamily:"monospace", outline:"none", flex:1, minWidth:100 }} placeholder="🎵 Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
+          <div style={{ position:"relative", flex:1, minWidth:100 }}>
+            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Mic size={15} /></span>
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
+          </div>
+          <div style={{ position:"relative", flex:1, minWidth:100 }}>
+            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Music size={15} /></span>
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
+          </div>
           <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
-            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("grid")}>⊞</button>
-            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", fontSize:18 }} onClick={() => setViewMode("list")}>≡</button>
+            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={16} /></button>
+            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={16} /></button>
           </div>
           <div style={{ position:"relative" }}>
             <button
               style={{ background: sortBy!=="cat_alpha"?"#1a3a5a":"transparent", border:`1px solid ${sortBy!=="cat_alpha"?"#5EEDED55":"#222"}`, color: sortBy!=="cat_alpha"?"#5EEDED":"#666", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", whiteSpace:"nowrap" }}
               onClick={() => setShowSortMenu(s => !s)}>
-              {sortBy==="cat_alpha"?"↕ Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}
+              <span style={{display:"flex",alignItems:"center",gap:6}}><Icon.Sort size={13} />{sortBy==="cat_alpha"?"Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}</span>
             </button>
             {showSortMenu && (
               <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:8, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
@@ -1215,7 +1326,7 @@ export default function App() {
             <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:4, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:4, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
-              ✏️ Editar disco
+              <Icon.Edit size={14} /> Editar disco
             </button>
           </div>
 
@@ -1239,7 +1350,7 @@ export default function App() {
                 </div>
               )}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }} onClick={()=>deleteRecord(selected.id)}>🗑 Remover disco</button>
+                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }} onClick={()=>deleteRecord(selected.id)}><Icon.Trash size={14} /> Remover disco</button>
               </div>
             </div>
           </div>
