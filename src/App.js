@@ -397,16 +397,16 @@ const PhotoPicker = ({ value, onChange }) => {
         : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 8, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>💿</div>
       }
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => camRef.current.click()}><Icon.Camera size={14} /> Câmera</button>
-        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => fileRef.current.click()}><Icon.Image size={14} /> Galeria</button>
-        {value && <button type="button" style={{ ...pBtn, color: "#e74c3c", borderColor: "#e74c3c44", display:"flex", alignItems:"center", gap:7, justifyContent:"center" }} onClick={() => onChange(null)}><Icon.Close size={12} /> Remover</button>}
+        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => camRef.current.click()}><Icon.Camera size={16} /> Câmera</button>
+        <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => fileRef.current.click()}><Icon.Image size={16} /> Galeria</button>
+        {value && <button type="button" style={{ ...pBtn, color: "#e74c3c", borderColor: "#e74c3c44", display:"flex", alignItems:"center", gap:7, justifyContent:"center" }} onClick={() => onChange(null)}><Icon.Close size={15} /> Remover</button>}
       </div>
       <input ref={camRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => onChange(ev.target.result); r.readAsDataURL(f); }} />
       <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => onChange(ev.target.result); r.readAsDataURL(f); }} />
     </div>
   );
 };
-const pBtn = { background: "transparent", border: "1px solid #2a2a2a", color: "#aaa", borderRadius: 4, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" };
+const pBtn = { background: "transparent", border: "1px solid #f0c03077", color: "#f0c030", borderRadius: 4, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" };
 
 // ── Scanner ───────────────────────────────────────────────────────────────
 function ScanOverlay({ onClose, onDetected }) {
@@ -506,8 +506,8 @@ function ScanOverlay({ onClose, onDetected }) {
   const rb = "2px solid #c0392b";
   const btn = (p, color) => ({
     background: p ? (color||"#c0392b") : "transparent",
-    border: `1px solid ${p ? (color||"#c0392b") : "#444"}`,
-    color: p ? "#fff" : "#999",
+    border: `1px solid ${p ? (color||"#c0392b") : "#f0c03077"}`,
+    color: p ? "#fff" : "#f0c030",
     borderRadius: 4, padding: "12px 24px", cursor: "pointer", fontSize: 15, fontFamily: "monospace"
   });
 
@@ -515,7 +515,7 @@ function ScanOverlay({ onClose, onDetected }) {
     <div style={{ position:"fixed", inset:0, background:"#000", zIndex:1000, display:"flex", flexDirection:"column", fontFamily:"'Georgia',serif" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}><VinylSVG size={24}/><span style={{ fontSize:14, fontFamily:"monospace", letterSpacing:2, color:"#888", textTransform:"uppercase" }}>Escanear capa</span></div>
-        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }} onClick={() => { stopCam(); onClose(); }}><Icon.Close size={13} /> Fechar</button>
+        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }} onClick={() => { stopCam(); onClose(); }}><Icon.Close size={15} /> Fechar</button>
       </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
@@ -528,21 +528,21 @@ function ScanOverlay({ onClose, onDetected }) {
             {[{top:8,left:8,borderTop:rb,borderLeft:rb},{top:8,right:8,borderTop:rb,borderRight:rb},{bottom:8,left:8,borderBottom:rb,borderLeft:rb},{bottom:8,right:8,borderBottom:rb,borderRight:rb}].map((s,i)=><div key={i} style={{ position:"absolute", width:24, height:24, ...s }}/>)}
           </div>
           <canvas ref={canvasRef} style={{ display:"none" }}/>
-          <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"4px solid #fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }} onClick={snap}><Icon.Camera size={32} /></button>
+          <button style={{ width:80, height:80, borderRadius:"50%", background:"#c0392b", border:"none", boxShadow:"0 4px 16px #00000066, inset 0 0 0 3px #96281b", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff" }} onClick={snap}><Icon.Camera size={32} /></button>
           <button
             style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:20, padding:"7px 18px", cursor:"pointer", fontSize:13, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}
             onClick={() => setUseGemini(g => !g)}
             title="Usar Gemini para capas difíceis ou sem texto">
-            <Icon.Brain size={14} /> {useGemini ? "Gemini ativado" : "Usar IA Avançada"}
+            <Icon.Brain size={16} /> {useGemini ? "Gemini ativado" : "Usar IA Avançada"}
           </button>
-          <button style={btn(false)} onClick={() => fileRef.current.click()}><Icon.Image size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Usar foto da galeria</button>
+          <button style={btn(false)} onClick={() => fileRef.current.click()}><Icon.Image size={16} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Usar foto da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
 
         {phase==="camera" && camErr && (<>
           <div style={{ fontSize:52 }}>📷</div>
           <p style={{ fontFamily:"monospace", fontSize:15, color:"#666", lineHeight:1.7, textAlign:"center" }}>Câmera não disponível.<br/>Use uma foto da galeria.</p>
-          <button style={btn(true)} onClick={() => fileRef.current.click()}><Icon.Image size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Escolher da galeria</button>
+          <button style={btn(true)} onClick={() => fileRef.current.click()}><Icon.Image size={16} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Escolher da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
 
@@ -557,7 +557,7 @@ function ScanOverlay({ onClose, onDetected }) {
               style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setUseGemini(true); analyze(preview, null, true); }}
               title="Usar Gemini — melhor para capas sem texto">
-              <Icon.Brain size={14} /> IA Avançada
+              <Icon.Brain size={16} /> IA Avançada
             </button>
           </div>
         </>)}
@@ -573,7 +573,7 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
             {result.foundOnDiscogs===false ? "⚠ Identificado pela IA (não encontrado no Discogs)" : "✓ Disco identificado!"}
-            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={11} /> Gemini</span>}
+            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={13} /> Gemini</span>}
           </p>
           {errMsg && result.foundOnDiscogs===false && (
             <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:12, textAlign:"center", maxWidth:420, lineHeight:1.6 }}>{errMsg}</p>
@@ -751,7 +751,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
     <div style={{ padding: 18, maxWidth: 480 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ fontWeight: "normal", letterSpacing: 2, fontSize: 18, textTransform: "uppercase", margin: 0 }}>{title}</h2>
-        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={13} /> Cancelar</button>
+        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={15} /> Cancelar</button>
       </div>
 
       {/* Discogs search block */}
@@ -824,7 +824,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
               <button key={cat.id} type="button"
                 style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6, background: active ? cat.color : "#0e0e0e", border:`1px solid ${active ? cat.color : "#2a2a2a"}`, color: active ? textColorFor(cat.color) : "#888", borderRadius:8, padding:"12px 4px", cursor:"pointer", fontSize:11, fontFamily:"monospace", textAlign:"center" }}
                 onClick={() => set("tipo", cat.id)}>
-                <CatIcon size={20} />
+                <CatIcon size={22} />
                 <span>{cat.name}</span>
               </button>
             );
@@ -841,7 +841,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <div key={f} style={{ marginBottom: 14 }}>
           <label style={lStyle}>{l}</label>
           <div style={{ position:"relative" }}>
-            <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><FIcon size={16} /></span>
+            <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><FIcon size={18} /></span>
             <input style={{ ...fStyle, paddingLeft:38 }} value={form[f]} onChange={e => set(f, e.target.value)} />
           </div>
         </div>
@@ -850,16 +850,16 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
       <div style={{ marginBottom: 16 }}>
         <label style={lStyle}>Faixas (uma por linha)</label>
         <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:12, top:14, color:"#555", display:"flex", pointerEvents:"none" }}><Icon.List size={16} /></span>
+          <span style={{ position:"absolute", left:12, top:14, color:"#555", display:"flex", pointerEvents:"none" }}><Icon.List size={18} /></span>
           <textarea style={{ ...fStyle, height: 140, resize: "vertical", paddingLeft:38 }} placeholder={"Faixa 1\nFaixa 2\nFaixa 3"} value={form.tracks} onChange={e => set("tracks", e.target.value)} />
         </div>
       </div>
 
       {/* Location field */}
       <div style={{ marginBottom: 16 }}>
-        <label style={{ ...lStyle, display:"flex", alignItems:"center", gap:6 }}><Icon.Pin size={13} color="#c0392b" /> Localização (onde está o disco)</label>
+        <label style={{ ...lStyle, display:"flex", alignItems:"center", gap:6 }}><Icon.Pin size={15} color="#c0392b" /> Localização (onde está o disco)</label>
         <div style={{ position:"relative" }}>
-          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><Icon.Pin size={16} /></span>
+          <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", color:"#555", display:"flex", pointerEvents:"none" }}><Icon.Pin size={18} /></span>
           <input
             style={{ ...fStyle, paddingLeft:38 }}
             placeholder="Ex: Armário 1, Estante porta, Nacionais, Sala..."
@@ -888,7 +888,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                   else { set("washed", false); set("washedDate", ""); }
                 }} style={{ accentColor: opt.color }} />
                 <span style={{ width: 14, height: 14, borderRadius: "50%", background: opt.color, boxShadow: `0 0 6px ${opt.color}`, display: "inline-block", flexShrink: 0 }} />
-                <opt.Ico size={15} color={opt.color} />
+                <opt.Ico size={17} color={opt.color} />
                 <span style={{ fontSize: 15, color: "#ddd", fontFamily: "monospace" }}>{opt.label}</span>
               </label>
             );
@@ -1145,16 +1145,16 @@ export default function App() {
 
       {/* Nav */}
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
-        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={14} /> CATÁLOGO</button>
-        <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={14} /> MANUAL</button>
-        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={14} /> ESCANEAR</button>
+        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
+        <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
+        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#444" }}>{results.length} disco{results.length!==1?"s":""}</span>}
         <button style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
           onClick={() => exportCatalog(records)} title="Exportar backup">
-          <Icon.Save size={14} />
+          <Icon.Save size={16} />
         </button>
         <label style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center" }} title="Importar backup">
-          <Icon.Folder size={14} />
+          <Icon.Folder size={16} />
           <input type="file" accept=".json" style={{ display:"none" }} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
             try {
@@ -1193,27 +1193,27 @@ export default function App() {
           {categories.map(cat => (
             <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?textColorFor(cat.color):"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
           ))}
-          <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #222", color:"#555", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace", display:"flex", alignItems:"center", gap:5 }} onClick={() => setShowCatManager(true)}><Icon.Edit size={12} /> categorias</button>
+          <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #f0c03055", color:"#f0c030", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace", display:"flex", alignItems:"center", gap:5 }} onClick={() => setShowCatManager(true)}><Icon.Edit size={15} /> categorias</button>
         </div>
 
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
           <div style={{ position:"relative", flex:1, minWidth:100 }}>
-            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Mic size={15} /></span>
+            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Mic size={17} /></span>
             <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
           </div>
           <div style={{ position:"relative", flex:1, minWidth:100 }}>
-            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Music size={15} /></span>
+            <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Music size={17} /></span>
             <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
           </div>
           <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
-            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={16} /></button>
-            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={16} /></button>
+            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={18} /></button>
+            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={18} /></button>
           </div>
           <div style={{ position:"relative" }}>
             <button
               style={{ background: sortBy!=="cat_alpha"?"#1a3a5a":"transparent", border:`1px solid ${sortBy!=="cat_alpha"?"#5EEDED55":"#222"}`, color: sortBy!=="cat_alpha"?"#5EEDED":"#666", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", whiteSpace:"nowrap" }}
               onClick={() => setShowSortMenu(s => !s)}>
-              <span style={{display:"flex",alignItems:"center",gap:6}}><Icon.Sort size={13} />{sortBy==="cat_alpha"?"Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}</span>
+              <span style={{display:"flex",alignItems:"center",gap:6}}><Icon.Sort size={15} />{sortBy==="cat_alpha"?"Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}</span>
             </button>
             {showSortMenu && (
               <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:8, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
@@ -1326,7 +1326,7 @@ export default function App() {
             <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:4, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:4, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
-              <Icon.Edit size={14} /> Editar disco
+              <Icon.Edit size={16} /> Editar disco
             </button>
           </div>
 
@@ -1350,7 +1350,7 @@ export default function App() {
                 </div>
               )}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }} onClick={()=>deleteRecord(selected.id)}><Icon.Trash size={14} /> Remover disco</button>
+                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }} onClick={()=>deleteRecord(selected.id)}><Icon.Trash size={16} /> Remover disco</button>
               </div>
             </div>
           </div>
