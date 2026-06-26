@@ -75,7 +75,10 @@ const Icon = {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="6" y1="20" x2="6" y2="4"/><polyline points="3 7 6 4 9 7"/><line x1="18" y1="4" x2="18" y2="20"/><polyline points="15 17 18 20 21 17"/></svg>
   ),
   Brain: ({ size=16, color }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2a3 3 0 0 0-3 3v.3A3.5 3.5 0 0 0 4 8.5 3.5 3.5 0 0 0 5.8 11.6 3 3 0 0 0 5 14a3 3 0 0 0 1.5 2.6A3 3 0 0 0 9.5 21a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3z"/><path d="M14.5 2a3 3 0 0 1 3 3v.3a3.5 3.5 0 0 1 2.5 3.2 3.5 3.5 0 0 1-1.8 3.1A3 3 0 0 1 19 14a3 3 0 0 1-1.5 2.6A3 3 0 0 1 14.5 21a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3z"/></svg>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+  ),
+  Check: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
   ),
   Sparkle: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>
@@ -394,7 +397,7 @@ const PhotoPicker = ({ value, onChange }) => {
     <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
       {value
         ? <img src={value} alt="capa" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8, border: "2px solid #c0392b" }} />
-        : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 8, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36 }}>💿</div>
+        : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 8, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon.Vinyl size={36} color="#444" /></div>
       }
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => camRef.current.click()}><Icon.Camera size={16} /> Câmera</button>
@@ -540,7 +543,7 @@ function ScanOverlay({ onClose, onDetected }) {
         </>)}
 
         {phase==="camera" && camErr && (<>
-          <div style={{ fontSize:52 }}>📷</div>
+          <div style={{ display:"flex", justifyContent:"center" }}><Icon.Camera size={52} color="#555" /></div>
           <p style={{ fontFamily:"monospace", fontSize:15, color:"#666", lineHeight:1.7, textAlign:"center" }}>Câmera não disponível.<br/>Use uma foto da galeria.</p>
           <button style={btn(true)} onClick={() => fileRef.current.click()}><Icon.Image size={16} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Escolher da galeria</button>
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
@@ -552,7 +555,7 @@ function ScanOverlay({ onClose, onDetected }) {
           <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:8, border:"2px solid #1e1e1e" }}/>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
             <button style={btn(false)} onClick={retry}>↩ Tirar outra</button>
-            <button style={btn(true)} onClick={() => analyze(preview, null)}>🔍 Identificar</button>
+            <button style={btn(true)} onClick={() => analyze(preview, null)}><Icon.Search size={15} /> Identificar</button>
             <button
               style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setUseGemini(true); analyze(preview, null, true); }}
@@ -572,7 +575,7 @@ function ScanOverlay({ onClose, onDetected }) {
         {/* Result */}
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
-            {result.foundOnDiscogs===false ? "⚠ Identificado pela IA (não encontrado no Discogs)" : "✓ Disco identificado!"}
+            {result.foundOnDiscogs===false ? <><Icon.Warning size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Identificado pela IA (não encontrado no Discogs)</> : <><Icon.Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Disco identificado!</>}
             {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={13} /> Gemini</span>}
           </p>
           {errMsg && result.foundOnDiscogs===false && (
@@ -616,7 +619,7 @@ function ScanOverlay({ onClose, onDetected }) {
             <span style={{ fontSize:13, fontFamily:"monospace", color:"#888" }}>Disco errado?</span>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setPhase("manual"); setManualQuery(""); }}>
-              ✏️ Corrigir — buscar pelo nome
+              <Icon.Edit size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Corrigir — buscar pelo nome
             </button>
           </div>
           <button style={btn(true)} onClick={() => onDetected(result)}>+ Adicionar ao catálogo</button>
@@ -636,7 +639,7 @@ function ScanOverlay({ onClose, onDetected }) {
               autoFocus
             />
             <button style={{ ...btn(true), opacity: searching||!manualQuery.trim() ? 0.6 : 1 }} onClick={searchManual} disabled={searching||!manualQuery.trim()}>
-              {searching ? "Buscando…" : "🔍 Buscar no Discogs"}
+              {searching ? "Buscando…" : <><Icon.Search size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Buscar no Discogs</>}
             </button>
           </div>
           <button style={btn(false)} onClick={retry}>↩ Tirar outra foto</button>
@@ -644,7 +647,7 @@ function ScanOverlay({ onClose, onDetected }) {
 
         {/* Error */}
         {phase==="error" && (<>
-          <div style={{ fontSize:48, textAlign:"center" }}>🔍</div>
+          <div style={{ display:"flex", justifyContent:"center" }}><Icon.Search size={48} color="#555" /></div>
           <p style={{ fontFamily:"monospace", color:"#e74c3c", fontSize:14, textAlign:"center", maxWidth:340 }}>{errMsg}</p>
           <button style={btn(true)} onClick={retry}>↩ Tentar novamente</button>
         </>)}
@@ -759,7 +762,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <button
           style={{ width: "100%", background: showDiscogs ? "#1a1a1a" : "transparent", border: "none", color: "#4db8ff", padding: "12px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
           onClick={() => setShowDiscogs(s => !s)}>
-          <span style={{ fontSize: 18 }}>🔍</span>
+          <Icon.Search size={18} />
           <span>Buscar no Discogs para preencher automaticamente</span>
           <span style={{ marginLeft: "auto" }}>{showDiscogs ? "▲" : "▼"}</span>
         </button>
@@ -805,7 +808,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                 <button
                   style={{ background:"transparent", border:"1px solid #333", color:"#666", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginTop:4 }}
                   onClick={() => { setDiscogsResults([]); setDiscogsQuery(""); }}>
-                  ✕ Limpar resultados
+                  <Icon.Close size={13} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Limpar resultados
                 </button>
               </div>
             )}
@@ -1137,7 +1140,7 @@ export default function App() {
         </div>
         {view==="catalog" && !selected && (
           <div style={{ position:"relative" }}>
-            <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#444", fontSize:18 }}>🔍</span>
+            <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Search size={18} /></span>
             <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #1e1e1e", borderRadius:6, padding:"13px 14px 13px 44px", color:"#5EEDED", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Busca geral: artista, disco, música…" value={query} onChange={e => setQuery(e.target.value)} />
           </div>
         )}
@@ -1227,7 +1230,7 @@ export default function App() {
                   <button key={val}
                     style={{ display:"block", width:"100%", textAlign:"left", background: sortBy===val?"#c0392b22":"transparent", border:"none", borderBottom:"1px solid #1a1a1a", color: sortBy===val?"#c0392b":"#aaa", padding:"11px 16px", cursor:"pointer", fontSize:13, fontFamily:"monospace" }}
                     onClick={() => { setSortBy(val); setShowSortMenu(false); }}>
-                    {sortBy===val ? "✓ " : "   "}{label}
+                    {sortBy===val && <Icon.Check size={12} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/>}{label}
                   </button>
                 ))}
               </div>
@@ -1246,7 +1249,7 @@ export default function App() {
                       onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                       {r.coverPhoto
                         ? <img src={r.coverPhoto} alt="capa" style={{ width:"100%", aspectRatio:"1", objectFit:"cover" }} />
-                        : <div style={{ width:"100%", aspectRatio:"1", background:"#111", display:"flex", alignItems:"center", justifyContent:"center", fontSize:48 }}>{r.coverEmoji||"💿"}</div>
+                        : <div style={{ width:"100%", aspectRatio:"1", background:"#111", display:"flex", alignItems:"center", justifyContent:"center" }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:48}}>{r.coverEmoji}</span>:<Icon.Vinyl size={40} color="#3a3a3a" />}</div>
                       }
                       <div style={{ padding:"12px 12px 14px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
@@ -1264,7 +1267,7 @@ export default function App() {
                             const match=idx>=0?t.slice(idx,idx+q.length):"";
                             const after=idx>=0?t.slice(idx+q.length):"";
                             return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", padding:"3px 0", display:"flex", alignItems:"flex-start", gap:6 }}>
-                              <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
+                              <span style={{ color:"#c0392b", flexShrink:0, display:"flex" }}><Icon.Music size={11} /></span>
                               <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
                             </div>;
                           })}
@@ -1285,7 +1288,7 @@ export default function App() {
                         onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                         {r.coverPhoto
                           ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, flexShrink:0 }} />
-                          : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:26, flexShrink:0 }}>{r.coverEmoji||"💿"}</div>
+                          : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:26}}>{r.coverEmoji}</span>:<Icon.Vinyl size={24} color="#3a3a3a" />}</div>
                         }
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -1293,7 +1296,7 @@ export default function App() {
                             {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
-                          <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8 }}>📍 {r.location}</span> : ""}</div>
+                          <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8, display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Pin size={11} /> {r.location}</span> : ""}</div>
                         </div>
                         <WashDot washed={r.washed} washedDate={r.washedDate} />
                       </div>
@@ -1305,7 +1308,7 @@ export default function App() {
                             const match=idx>=0?t.slice(idx,idx+hq.length):"";
                             const after=idx>=0?t.slice(idx+hq.length):"";
                             return <div key={i} style={{ fontSize:12, fontFamily:"monospace", color:"#aaa", display:"flex", alignItems:"flex-start", gap:6 }}>
-                              <span style={{ color:"#c0392b", flexShrink:0 }}>♪</span>
+                              <span style={{ color:"#c0392b", flexShrink:0, display:"flex" }}><Icon.Music size={11} /></span>
                               <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
                             </div>;
                           })}
@@ -1333,20 +1336,20 @@ export default function App() {
           <div style={{ display:"flex", gap:18, marginBottom:22, alignItems:"flex-start" }}>
             {selected.coverPhoto
               ? <img src={selected.coverPhoto} alt="capa" style={{ width:120, height:120, objectFit:"cover", borderRadius:10, flexShrink:0 }} />
-              : <div style={{ width:120, height:120, background:"#111", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:50, flexShrink:0 }}>{selected.coverEmoji||"💿"}</div>
+              : <div style={{ width:120, height:120, background:"#111", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{selected.coverEmoji&&selected.coverEmoji!=="💿"?<span style={{fontSize:50}}>{selected.coverEmoji}</span>:<Icon.Vinyl size={50} color="#3a3a3a" />}</div>
             }
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>{selected.artist}</div>
               <h2 style={{ margin:"0 0 6px", fontSize:24, fontWeight:"normal", lineHeight:1.2 }}>{selected.album}</h2>
               <div style={{ fontSize:14, color:"#555", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
-              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>⚠ tem riscos</span></div>}
+              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={13} /> tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
                 {(()=>{ const cat = categories.find(c=>c.id===selected.tipo) || categories[0]; return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : null; })()}
               </div>
               {selected.location && (
                 <div style={{ marginTop:10, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:6, padding:"4px 12px" }}>📍 {selected.location}</span>
+                  <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:6, padding:"4px 12px", display:"inline-flex", alignItems:"center", gap:7 }}><Icon.Pin size={14} /> {selected.location}</span>
                 </div>
               )}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
@@ -1378,9 +1381,9 @@ export default function App() {
           </div>
           {playing && (
             <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:8 }}>
-              <span style={{ fontSize:18 }}>🎵</span>
+              <Icon.Music size={18} color="#5EEDED" />
               <span style={{ fontSize:12, fontFamily:"monospace", color:"#5EEDED", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{playing}</span>
-              <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:4, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }}>■ parar</button>
+              <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:4, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}><Icon.Pause size={11} /> parar</button>
             </div>
           )}
         </div>
