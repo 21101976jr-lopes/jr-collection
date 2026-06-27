@@ -47,6 +47,9 @@ const Icon = {
   Book: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4.5A2.5 2.5 0 0 1 4.5 2H11v18H4.5A2.5 2.5 0 0 1 2 17.5z"/><path d="M22 4.5A2.5 2.5 0 0 0 19.5 2H13v18h6.5a2.5 2.5 0 0 0 2.5-2.5z"/></svg>
   ),
+  Tv: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M8 2l4 4 4-4"/><line x1="8" y1="16" x2="8" y2="16.01"/></svg>
+  ),
   Image: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
   ),
@@ -396,8 +399,8 @@ const PhotoPicker = ({ value, onChange }) => {
   return (
     <div style={{ display: "flex", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
       {value
-        ? <img src={value} alt="capa" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 8, border: "2px solid #c0392b" }} />
-        : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 8, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon.Vinyl size={36} color="#444" /></div>
+        ? <img src={value} alt="capa" style={{ width: 100, height: 100, objectFit: "cover", borderRadius: 12, border: "2px solid #c0392b" }} />
+        : <div style={{ width: 100, height: 100, background: "#111", borderRadius: 12, border: "2px dashed #2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon.Vinyl size={36} color="#444" /></div>
       }
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <button type="button" style={{...pBtn, display:"flex", alignItems:"center", gap:7, justifyContent:"center"}} onClick={() => camRef.current.click()}><Icon.Camera size={16} /> Câmera</button>
@@ -409,7 +412,7 @@ const PhotoPicker = ({ value, onChange }) => {
     </div>
   );
 };
-const pBtn = { background: "transparent", border: "1px solid #f0c03077", color: "#f0c030", borderRadius: 4, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" };
+const pBtn = { background: "transparent", border: "1px solid #f0c03077", color: "#f0c030", borderRadius: 9, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" };
 
 // ── Scanner ───────────────────────────────────────────────────────────────
 function ScanOverlay({ onClose, onDetected }) {
@@ -511,14 +514,14 @@ function ScanOverlay({ onClose, onDetected }) {
     background: p ? (color||"#c0392b") : "transparent",
     border: `1px solid ${p ? (color||"#c0392b") : "#f0c03077"}`,
     color: p ? "#fff" : "#f0c030",
-    borderRadius: 4, padding: "12px 24px", cursor: "pointer", fontSize: 15, fontFamily: "monospace"
+    borderRadius: 9, padding: "12px 24px", cursor: "pointer", fontSize: 15, fontFamily: "monospace"
   });
 
   return (
     <div style={{ position:"fixed", inset:0, background:"#000", zIndex:1000, display:"flex", flexDirection:"column", fontFamily:"'Georgia',serif" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #1a1a1a" }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}><VinylSVG size={24}/><span style={{ fontSize:14, fontFamily:"monospace", letterSpacing:2, color:"#888", textTransform:"uppercase" }}>Escanear capa</span></div>
-        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:3, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }} onClick={() => { stopCam(); onClose(); }}><Icon.Close size={15} /> Fechar</button>
+        <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"7px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold", display:"flex", alignItems:"center", gap:6 }} onClick={() => { stopCam(); onClose(); }}><Icon.Close size={15} /> Fechar</button>
       </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
@@ -527,7 +530,7 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="camera" && !camErr && (<>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#666", textAlign:"center" }}>Aponte para a capa do disco e fotografe</p>
           <div style={{ position:"relative", width:"100%", maxWidth:460 }}>
-            <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", borderRadius:8, border:"2px solid #1e1e1e", background:"#111", display:"block" }} />
+            <video ref={videoRef} autoPlay playsInline muted style={{ width:"100%", borderRadius:12, border:"2px solid #1e1e1e", background:"#111", display:"block" }} />
             {[{top:8,left:8,borderTop:rb,borderLeft:rb},{top:8,right:8,borderTop:rb,borderRight:rb},{bottom:8,left:8,borderBottom:rb,borderLeft:rb},{bottom:8,right:8,borderBottom:rb,borderRight:rb}].map((s,i)=><div key={i} style={{ position:"absolute", width:24, height:24, ...s }}/>)}
           </div>
           <canvas ref={canvasRef} style={{ display:"none" }}/>
@@ -552,12 +555,12 @@ function ScanOverlay({ onClose, onDetected }) {
         {/* Preview */}
         {phase==="preview" && (<>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#666", textAlign:"center" }}>A foto ficou boa?</p>
-          <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:8, border:"2px solid #1e1e1e" }}/>
+          <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:12, border:"2px solid #1e1e1e" }}/>
           <div style={{ display:"flex", gap:10, flexWrap:"wrap", justifyContent:"center" }}>
             <button style={btn(false)} onClick={retry}>↩ Tirar outra</button>
             <button style={btn(true)} onClick={() => analyze(preview, null)}><Icon.Search size={15} /> Identificar</button>
             <button
-              style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:4, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              style={{ background: useGemini?"#4285f4":"transparent", border:`1px solid ${useGemini?"#4285f4":"#444"}`, color: useGemini?"#fff":"#777", borderRadius:9, padding:"12px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setUseGemini(true); analyze(preview, null, true); }}
               title="Usar Gemini — melhor para capas sem texto">
               <Icon.Brain size={16} /> IA Avançada
@@ -576,12 +579,12 @@ function ScanOverlay({ onClose, onDetected }) {
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
             {result.foundOnDiscogs===false ? <><Icon.Warning size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Identificado pela IA (não encontrado no Discogs)</> : <><Icon.Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Disco identificado!</>}
-            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:3, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={13} /> Gemini</span>}
+            {result.usedGemini && <span style={{ marginLeft:8, fontSize:11, background:"#4285f422", color:"#4285f4", border:"1px solid #4285f444", borderRadius:9, padding:"1px 6px", display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Brain size={13} /> Gemini</span>}
           </p>
           {errMsg && result.foundOnDiscogs===false && (
             <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:12, textAlign:"center", maxWidth:420, lineHeight:1.6 }}>{errMsg}</p>
           )}
-          <div style={{ width:"100%", maxWidth:460, background:"#0e0e0e", border:"1px solid #222", borderRadius:8, overflow:"hidden" }}>
+          <div style={{ width:"100%", maxWidth:460, background:"#0e0e0e", border:"1px solid #222", borderRadius:12, overflow:"hidden" }}>
             <div style={{ display:"flex", gap:0 }}>
               {result.coverUrl && <img src={result.coverUrl} alt="capa" style={{ width:110, height:110, objectFit:"cover", flexShrink:0 }}/>}
               <div style={{ padding:14, flex:1 }}>
@@ -602,9 +605,9 @@ function ScanOverlay({ onClose, onDetected }) {
             <div style={{ width:"100%", maxWidth:460 }}>
               <p style={{ fontSize:12, fontFamily:"monospace", color:"#555", marginBottom:8 }}>Não é esse? Veja outras opções:</p>
               {altResults.slice(1).map(r => (
-                <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#0e0e0e", border:"1px solid #1a1a1a", borderRadius:6, marginBottom:6, cursor:"pointer" }}
+                <div key={r.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", background:"#0e0e0e", border:"1px solid #1a1a1a", borderRadius:11, marginBottom:6, cursor:"pointer" }}
                   onClick={() => pickAlt(r.id)}>
-                  {r.cover ? <img src={r.cover} alt="" style={{ width:40, height:40, objectFit:"cover", borderRadius:4 }}/> : <div style={{ width:40, height:40, background:"#111", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💿</div>}
+                  {r.cover ? <img src={r.cover} alt="" style={{ width:40, height:40, objectFit:"cover", borderRadius:9 }}/> : <div style={{ width:40, height:40, background:"#111", borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>💿</div>}
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:13, color:"#ddd", fontFamily:"monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</div>
                     <div style={{ fontSize:11, color:"#555", fontFamily:"monospace" }}>{r.year} · {r.label} · {r.country}</div>
@@ -615,9 +618,9 @@ function ScanOverlay({ onClose, onDetected }) {
             </div>
           )}
 
-          <div style={{ width:"100%", maxWidth:460, background:"#1a0a0a", border:"1px solid #c0392b33", borderRadius:8, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+          <div style={{ width:"100%", maxWidth:460, background:"#1a0a0a", border:"1px solid #c0392b33", borderRadius:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
             <span style={{ fontSize:13, fontFamily:"monospace", color:"#888" }}>Disco errado?</span>
-            <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+            <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:9, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => { setPhase("manual"); setManualQuery(""); }}>
               <Icon.Edit size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Corrigir — buscar pelo nome
             </button>
@@ -631,7 +634,7 @@ function ScanOverlay({ onClose, onDetected }) {
           <p style={{ fontFamily:"monospace", color:"#888", fontSize:14, textAlign:"center" }}>Digite o nome do disco para buscar no Discogs:</p>
           <div style={{ width:"100%", maxWidth:420, display:"flex", flexDirection:"column", gap:10 }}>
             <input
-              style={{ width:"100%", background:"#111", border:"1px solid #c0392b55", borderRadius:6, padding:"13px 16px", color:"#f0ece4", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }}
+              style={{ width:"100%", background:"#111", border:"1px solid #c0392b55", borderRadius:11, padding:"13px 16px", color:"#f0ece4", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }}
               placeholder="Ex: Final Feliz Internacional"
               value={manualQuery}
               onChange={e => setManualQuery(e.target.value)}
@@ -660,7 +663,7 @@ function ScanOverlay({ onClose, onDetected }) {
 // ── Form fields helper ────────────────────────────────────────────────────
 const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", location: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
 
-const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 4, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
+const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 9, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#666", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
 
 function RecordForm({ initial, onSave, onCancel, title, categories }) {
@@ -754,11 +757,11 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
     <div style={{ padding: 18, maxWidth: 480 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ fontWeight: "normal", letterSpacing: 2, fontSize: 18, textTransform: "uppercase", margin: 0 }}>{title}</h2>
-        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 3, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={15} /> Cancelar</button>
+        <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 9, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={15} /> Cancelar</button>
       </div>
 
       {/* Discogs search block */}
-      <div style={{ marginBottom: 20, background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ marginBottom: 20, background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 12, overflow: "hidden" }}>
         <button
           style={{ width: "100%", background: showDiscogs ? "#1a1a1a" : "transparent", border: "none", color: "#4db8ff", padding: "12px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
           onClick={() => setShowDiscogs(s => !s)}>
@@ -770,7 +773,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
           <div style={{ padding: "0 16px 16px", borderTop: "1px solid #1a1a1a" }}>
             <div style={{ display: "flex", gap: 8, marginTop: 14, marginBottom: discogsResults.length ? 12 : 0 }}>
               <input
-                style={{ flex: 1, background: "#111", border: "1px solid #2a2a2a", borderRadius: 4, padding: "10px 14px", color: "#f0ece4", fontSize: 15, fontFamily: "monospace", outline: "none" }}
+                style={{ flex: 1, background: "#111", border: "1px solid #2a2a2a", borderRadius: 9, padding: "10px 14px", color: "#f0ece4", fontSize: 15, fontFamily: "monospace", outline: "none" }}
                 placeholder="Nome do disco ou artista…"
                 value={discogsQuery}
                 onChange={e => setDiscogsQuery(e.target.value)}
@@ -778,7 +781,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                 autoFocus
               />
               <button
-                style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "10px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", opacity: discogsLoading ? 0.6 : 1 }}
+                style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "10px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", opacity: discogsLoading ? 0.6 : 1 }}
                 onClick={searchDiscogs} disabled={discogsLoading}>
                 {discogsLoading ? "…" : "Buscar"}
               </button>
@@ -790,11 +793,11 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                 </p>
                 {discogsResults.map((r, i) => (
                   <div key={r.id||i}
-                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#111", border: "1px solid #252525", borderRadius: 8, cursor: "pointer" }}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#111", border: "1px solid #252525", borderRadius: 12, cursor: "pointer" }}
                     onClick={() => pickDiscogsResult(r)}>
                     {r.cover
-                      ? <img src={r.cover} alt="" style={{ width:52, height:52, objectFit:"cover", borderRadius:6, flexShrink:0 }}/>
-                      : <div style={{ width:52, height:52, background:"#1a1a1a", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>💿</div>
+                      ? <img src={r.cover} alt="" style={{ width:52, height:52, objectFit:"cover", borderRadius:11, flexShrink:0 }}/>
+                      : <div style={{ width:52, height:52, background:"#1a1a1a", borderRadius:11, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>💿</div>
                     }
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize:14, color:"#f0ece4", fontFamily:"monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.title}</div>
@@ -806,7 +809,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                   </div>
                 ))}
                 <button
-                  style={{ background:"transparent", border:"1px solid #333", color:"#666", borderRadius:4, padding:"8px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginTop:4 }}
+                  style={{ background:"transparent", border:"1px solid #333", color:"#666", borderRadius:9, padding:"8px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginTop:4 }}
                   onClick={() => { setDiscogsResults([]); setDiscogsQuery(""); }}>
                   <Icon.Close size={13} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Limpar resultados
                 </button>
@@ -821,11 +824,11 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <label style={lStyle}>Tipo de disco</label>
         <div style={{ display:"flex", gap:8 }}>
           {categories.map(cat => {
-            const CatIcon = cat.id==="banda" ? Icon.Person : cat.id==="novela" ? Icon.Book : cat.id==="coletanea" ? Icon.People : Icon.Tag;
+            const CatIcon = cat.id==="banda" ? Icon.Person : cat.id==="novela" ? Icon.Tv : cat.id==="coletanea" ? Icon.People : Icon.Tag;
             const active = form.tipo===cat.id;
             return (
               <button key={cat.id} type="button"
-                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6, background: active ? cat.color : "#0e0e0e", border:`1px solid ${active ? cat.color : "#2a2a2a"}`, color: active ? textColorFor(cat.color) : "#888", borderRadius:8, padding:"12px 4px", cursor:"pointer", fontSize:11, fontFamily:"monospace", textAlign:"center" }}
+                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:6, background: active ? cat.color : "#0e0e0e", border:`1px solid ${active ? cat.color : "#2a2a2a"}`, color: active ? textColorFor(cat.color) : "#888", borderRadius:12, padding:"12px 4px", cursor:"pointer", fontSize:11, fontFamily:"monospace", textAlign:"center" }}
                 onClick={() => set("tipo", cat.id)}>
                 <CatIcon size={22} />
                 <span>{cat.name}</span>
@@ -884,7 +887,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
             const m = monthsAgo(form.washedDate);
             const isSelected = opt.key === "green" ? (form.washed && m <= 12) : opt.key === "yellow" ? (form.washed && m > 12) : !form.washed;
             return (
-              <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "12px 14px", background: isSelected ? `${opt.color}11` : "#0e0e0e", border: `1px solid ${isSelected ? opt.color+"55" : "#1e1e1e"}`, borderRadius: 6 }}>
+              <label key={opt.key} style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", padding: "12px 14px", background: isSelected ? `${opt.color}11` : "#0e0e0e", border: `1px solid ${isSelected ? opt.color+"55" : "#1e1e1e"}`, borderRadius: 11 }}>
                 <input type="radio" name="washStatus" checked={isSelected} onChange={() => {
                   if (opt.key === "green") { set("washed", true); set("washedDate", new Date().toISOString().split("T")[0]); }
                   else if (opt.key === "yellow") { set("washed", true); const d = new Date(); d.setFullYear(d.getFullYear() - 2); set("washedDate", d.toISOString().split("T")[0]); }
@@ -910,7 +913,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         Disco tem riscos
       </label>
 
-      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 4, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={async () => {
+      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={async () => {
         const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
         // Compress only data URLs (not http URLs from Discogs)
         const coverPhoto = form.coverPhoto && !form.coverPhoto.startsWith("http")
@@ -1113,7 +1116,7 @@ export default function App() {
     setSelected(null); setView("catalog"); showToast("Disco removido.");
   };
 
-  const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#222"}`, color: active ? "#fff" : "#777", borderRadius: 4, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 });
+  const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#f0c03055"}`, color: active ? "#fff" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 });
 
   return (
     <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden" }}>
@@ -1126,12 +1129,12 @@ export default function App() {
       `}</style>
 
       {scanning && <ScanOverlay onClose={() => setScanning(false)} onDetected={handleScanDetected} />}
-      {toast && <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#111", border:"1px solid #c0392b55", color:"#f0ece4", padding:"12px 24px", borderRadius:8, fontFamily:"monospace", fontSize:14, zIndex:500, whiteSpace:"nowrap", boxShadow:"0 4px 20px #000" }}>{toast}</div>}
+      {toast && <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#111", border:"1px solid #c0392b55", color:"#f0ece4", padding:"12px 24px", borderRadius:12, fontFamily:"monospace", fontSize:14, zIndex:500, whiteSpace:"nowrap", boxShadow:"0 4px 20px #000" }}>{toast}</div>}
 
       {/* Header */}
       <div style={{ background:"linear-gradient(180deg,#130707 0%,#0a0a0a 100%)", borderBottom:"1px solid #1a1a1a", padding:"18px 18px 14px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
-          <img src="/icon-192.png" alt="JR Collection" style={{ width:64, height:64, borderRadius:12, flexShrink:0 }} />
+          <img src="/icon-192.png" alt="JR Collection" style={{ width:64, height:64, borderRadius:14, flexShrink:0 }} />
           <div>
             <h1 style={{ fontSize:32, fontWeight:"normal", letterSpacing:3, color:"#f0ece4", margin:"0 0 3px" }}>Jr Collection</h1>
             <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:3, textTransform:"uppercase" }}>Discos-LP</div>
@@ -1141,7 +1144,7 @@ export default function App() {
         {view==="catalog" && !selected && (
           <div style={{ position:"relative" }}>
             <span style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Search size={18} /></span>
-            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #1e1e1e", borderRadius:6, padding:"13px 14px 13px 44px", color:"#5EEDED", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Busca geral: artista, disco, música…" value={query} onChange={e => setQuery(e.target.value)} />
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #1e1e1e", borderRadius:11, padding:"13px 14px 13px 44px", color:"#5EEDED", fontSize:16, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Busca geral: artista, disco, música…" value={query} onChange={e => setQuery(e.target.value)} />
           </div>
         )}
       </div>
@@ -1150,13 +1153,13 @@ export default function App() {
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
         <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
         <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
-        <button style={{ background:"#4a4a4a", border:"1px solid #666", color:"#f0f0f0", borderRadius:4, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
+        <button style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#444" }}>{results.length} disco{results.length!==1?"s":""}</span>}
-        <button style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
+        <button style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
           onClick={() => exportCatalog(records)} title="Exportar backup">
           <Icon.Save size={16} />
         </button>
-        <label style={{ background:"transparent", border:"1px solid #2a2a2a", color:"#666", borderRadius:4, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center" }} title="Importar backup">
+        <label style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center" }} title="Importar backup">
           <Icon.Folder size={16} />
           <input type="file" accept=".json" style={{ display:"none" }} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
@@ -1192,9 +1195,9 @@ export default function App() {
       {view==="catalog" && !selected && (<>
         {/* Category filter buttons */}
         <div style={{ display:"flex", gap:6, padding:"10px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
-          <button style={{ background:filterCat===null?"#f0ece4":"transparent", border:"1px solid #333", color:filterCat===null?"#0a0a0a":"#666", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(null)}>Todos</button>
+          <button style={{ background:filterCat===null?"#f0ece4":"transparent", border:`1px solid ${filterCat===null?"#f0ece4":"#f0c03066"}`, color:filterCat===null?"#0a0a0a":"#d4af6a", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(null)}>Todos</button>
           {categories.map(cat => (
-            <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#333"}`, color:filterCat===cat.id?textColorFor(cat.color):"#777", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
+            <button key={cat.id} style={{ background:filterCat===cat.id?cat.color:"transparent", border:`1px solid ${filterCat===cat.id?cat.color:"#f0c03066"}`, color:filterCat===cat.id?textColorFor(cat.color):"#d4af6a", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(filterCat===cat.id?null:cat.id)}>{cat.name}</button>
           ))}
           <button style={{ marginLeft:"auto", background:"transparent", border:"1px solid #f0c03055", color:"#f0c030", borderRadius:20, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"monospace", display:"flex", alignItems:"center", gap:5 }} onClick={() => setShowCatManager(true)}><Icon.Edit size={15} /> categorias</button>
         </div>
@@ -1202,24 +1205,24 @@ export default function App() {
         <div style={{ display:"flex", gap:8, padding:"12px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
           <div style={{ position:"relative", flex:1, minWidth:100 }}>
             <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Mic size={17} /></span>
-            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:9, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Cantor / Banda" value={filterArtist} onChange={e => setFilterArtist(e.target.value)} />
           </div>
           <div style={{ position:"relative", flex:1, minWidth:100 }}>
             <span style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:"#5EEDED", display:"flex", pointerEvents:"none" }}><Icon.Music size={17} /></span>
-            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:4, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
+            <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:9, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
           </div>
-          <div style={{ display:"flex", border:"1px solid #222", borderRadius:4, overflow:"hidden" }}>
-            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={18} /></button>
-            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#666", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={18} /></button>
+          <div style={{ display:"flex", border:"1px solid #f0c03066", borderRadius:9, overflow:"hidden" }}>
+            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={18} /></button>
+            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={18} /></button>
           </div>
           <div style={{ position:"relative" }}>
             <button
-              style={{ background: sortBy!=="cat_alpha"?"#1a3a5a":"transparent", border:`1px solid ${sortBy!=="cat_alpha"?"#5EEDED55":"#222"}`, color: sortBy!=="cat_alpha"?"#5EEDED":"#666", borderRadius:4, padding:"8px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", whiteSpace:"nowrap" }}
+              style={{ background: sortBy!=="cat_alpha"?"#1a3a5a":"transparent", border:`1px solid ${sortBy!=="cat_alpha"?"#5EEDED55":"#f0c03066"}`, color: sortBy!=="cat_alpha"?"#5EEDED":"#d4af6a", borderRadius:9, padding:"8px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", whiteSpace:"nowrap" }}
               onClick={() => setShowSortMenu(s => !s)}>
               <span style={{display:"flex",alignItems:"center",gap:6}}><Icon.Sort size={15} />{sortBy==="cat_alpha"?"Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}</span>
             </button>
             {showSortMenu && (
-              <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:8, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
+              <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:12, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
                 {[
                   ["cat_alpha","↕ Categoria + A→Z"],
                   ["alpha_az","A → Z"],
@@ -1245,7 +1248,7 @@ export default function App() {
                 {results.map(r => {
                   const mt = matchedTracks(r);
                   return (
-                    <div key={r.id} style={{ background:hovCard===r.id?"#141414":"#0c0c0c", border:`1px solid ${hovCard===r.id?"#2a2a2a":"#141414"}`, borderRadius:10, cursor:"pointer", overflow:"hidden", transition:"all 0.15s" }}
+                    <div key={r.id} style={{ background:hovCard===r.id?"#141414":"#0c0c0c", border:`1px solid ${hovCard===r.id?"#2a2a2a":"#141414"}`, borderRadius:13, cursor:"pointer", overflow:"hidden", transition:"all 0.15s" }}
                       onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                       {r.coverPhoto
                         ? <img src={r.coverPhoto} alt="capa" style={{ width:"100%", aspectRatio:"1", objectFit:"cover" }} />
@@ -1254,7 +1257,7 @@ export default function App() {
                       <div style={{ padding:"12px 12px 14px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
                           <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><Hl text={r.artist}/></div>
-                          {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
+                          {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
                         </div>
                         <div style={{ fontSize:16, color:"#f0ece4", lineHeight:1.3, marginBottom:6 }}><Hl text={r.album}/></div>
                         <div style={{ fontSize:12, color:"#3a3a3a", fontFamily:"monospace", marginBottom:10 }}>{r.year} · {r.genre}</div>
@@ -1284,16 +1287,16 @@ export default function App() {
                   const hq = hlTerm.toLowerCase();
                   return (
                     <div key={r.id}>
-                      <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:8, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
+                      <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:12, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
                         onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                         {r.coverPhoto
-                          ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, flexShrink:0 }} />
-                          : <div style={{ width:56, height:56, background:"#111", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:26}}>{r.coverEmoji}</span>:<Icon.Vinyl size={24} color="#3a3a3a" />}</div>
+                          ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:11, flexShrink:0 }} />
+                          : <div style={{ width:56, height:56, background:"#111", borderRadius:11, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:26}}>{r.coverEmoji}</span>:<Icon.Vinyl size={24} color="#3a3a3a" />}</div>
                         }
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                             <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
-                            {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:3, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
+                            {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
                           <div style={{ fontSize:12, color:"#444", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8, display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Pin size={11} /> {r.location}</span> : ""}</div>
@@ -1326,8 +1329,8 @@ export default function App() {
       {view==="detail" && selected && (
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
-            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:4, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
-            <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:4, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
+            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
+            <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               <Icon.Edit size={16} /> Editar disco
             </button>
@@ -1335,55 +1338,55 @@ export default function App() {
 
           <div style={{ display:"flex", gap:18, marginBottom:22, alignItems:"flex-start" }}>
             {selected.coverPhoto
-              ? <img src={selected.coverPhoto} alt="capa" style={{ width:120, height:120, objectFit:"cover", borderRadius:10, flexShrink:0 }} />
-              : <div style={{ width:120, height:120, background:"#111", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{selected.coverEmoji&&selected.coverEmoji!=="💿"?<span style={{fontSize:50}}>{selected.coverEmoji}</span>:<Icon.Vinyl size={50} color="#3a3a3a" />}</div>
+              ? <img src={selected.coverPhoto} alt="capa" style={{ width:120, height:120, objectFit:"cover", borderRadius:13, flexShrink:0 }} />
+              : <div style={{ width:120, height:120, background:"#111", borderRadius:13, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{selected.coverEmoji&&selected.coverEmoji!=="💿"?<span style={{fontSize:50}}>{selected.coverEmoji}</span>:<Icon.Vinyl size={50} color="#3a3a3a" />}</div>
             }
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontSize:13, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>{selected.artist}</div>
               <h2 style={{ margin:"0 0 6px", fontSize:24, fontWeight:"normal", lineHeight:1.2 }}>{selected.album}</h2>
               <div style={{ fontSize:14, color:"#555", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
-              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:4, padding:"3px 10px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={13} /> tem riscos</span></div>}
+              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:9, padding:"3px 10px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={13} /> tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
-                {(()=>{ const cat = categories.find(c=>c.id===selected.tipo) || categories[0]; return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:4, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : null; })()}
+                {(()=>{ const cat = categories.find(c=>c.id===selected.tipo) || categories[0]; return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : null; })()}
               </div>
               {selected.location && (
                 <div style={{ marginTop:10, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:6, padding:"4px 12px", display:"inline-flex", alignItems:"center", gap:7 }}><Icon.Pin size={14} /> {selected.location}</span>
+                  <span style={{ fontSize:14, color:"#5EEDED", fontFamily:"monospace", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:11, padding:"4px 12px", display:"inline-flex", alignItems:"center", gap:7 }}><Icon.Pin size={14} /> {selected.location}</span>
                 </div>
               )}
               <div style={{ marginTop:14, display:"flex", gap:10, flexWrap:"wrap" }}>
-                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:4, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }} onClick={()=>deleteRecord(selected.id)}><Icon.Trash size={16} /> Remover disco</button>
+                <button style={{ background:"#e74c3c11", border:"1px solid #e74c3c33", color:"#e74c3c", borderRadius:9, padding:"9px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }} onClick={()=>deleteRecord(selected.id)}><Icon.Trash size={16} /> Remover disco</button>
               </div>
             </div>
           </div>
 
           <div style={{ fontSize:13, fontFamily:"monospace", color:"#444", letterSpacing:1, marginBottom:8 }}>FAIXAS — {selected.tracks.length} <span style={{ color:"#3a3a3a", fontSize:11 }}>▶ toque para ouvir 30s</span></div>
-          <div style={{ background:"#0c0c0c", border:"1px solid #141414", borderRadius:8, padding:"6px 0" }}>
+          <div style={{ background:"#0c0c0c", border:"1px solid #141414", borderRadius:12, padding:"6px 0" }}>
             {selected.tracks.map((t,i)=>{
               const q = filterTrack||query;
               const m = q && t.toLowerCase().includes(q.toLowerCase());
               const isPlaying = playing === t;
               const isLoading = loading === t;
               return (
-                <div key={i} style={{ padding:"8px 14px", fontSize:14, fontFamily:"monospace", color:m?"#ff8080":isPlaying?"#5EEDED":"#777", background:isPlaying?"#5EEDED0d":m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":isPlaying?"#5EEDED":"transparent"}`, display:"flex", alignItems:"center", gap:10 }}>
-                  <span style={{ color:"#2a2a2a", flexShrink:0, fontSize:12, minWidth:20 }}>{String(i+1).padStart(2,"0")}</span>
+                <div key={i} style={{ padding:"8px 14px", fontSize:14, fontFamily:"monospace", color:m?"#ff8080":isPlaying?"#5EEDED":"#f0ece4", background:isPlaying?"#5EEDED0d":m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":isPlaying?"#5EEDED":"transparent"}`, display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ color:"#8a8a8a", flexShrink:0, fontSize:12, minWidth:20 }}>{String(i+1).padStart(2,"0")}</span>
                   <span style={{ flex:1, lineHeight:1.3 }}>{t}</span>
                   <button
                     onClick={() => searchAndPlay(t, selected.artist)}
                     title={isPlaying?"Pausar":"Ouvir prévia de 30s"}
-                    style={{ background:isPlaying?"#5EEDED22":"#111", border:`1px solid ${isPlaying?"#5EEDED66":"#222"}`, borderRadius:"50%", width:28, height:28, cursor:"pointer", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:isPlaying?"#5EEDED":"#555", transition:"all 0.15s" }}>
-                    {isLoading?"⏳":isPlaying?"⏸":"▶"}
+                    style={{ background:isPlaying?"#5EEDED22":"#111", border:`1px solid ${isPlaying?"#5EEDED66":"#f0c03066"}`, borderRadius:"50%", width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:isPlaying?"#5EEDED":"#d4af6a", transition:"all 0.15s" }}>
+                    {isLoading ? <div style={{ width:12, height:12, borderRadius:"50%", border:"2px solid #5EEDED33", borderTop:"2px solid #5EEDED", animation:"spin 0.7s linear infinite" }}/> : isPlaying ? <Icon.Pause size={12} /> : <Icon.Play size={12} />}
                   </button>
                 </div>
               );
             })}
           </div>
           {playing && (
-            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:8 }}>
+            <div style={{ marginTop:10, display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:"#5EEDED11", border:"1px solid #5EEDED33", borderRadius:12 }}>
               <Icon.Music size={18} color="#5EEDED" />
               <span style={{ fontSize:12, fontFamily:"monospace", color:"#5EEDED", flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{playing}</span>
-              <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:4, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}><Icon.Pause size={11} /> parar</button>
+              <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:9, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}><Icon.Pause size={11} /> parar</button>
             </div>
           )}
         </div>
@@ -1393,10 +1396,10 @@ export default function App() {
       {/* Category Manager Modal */}
       {showCatManager && (
         <div style={{ position:"fixed", inset:0, background:"#000000cc", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-          <div style={{ background:"#0e0e0e", border:"1px solid #222", borderRadius:12, padding:24, width:"100%", maxWidth:420, maxHeight:"80vh", overflowY:"auto" }}>
+          <div style={{ background:"#0e0e0e", border:"1px solid #222", borderRadius:14, padding:24, width:"100%", maxWidth:420, maxHeight:"80vh", overflowY:"auto" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
               <h3 style={{ fontWeight:"normal", fontSize:16, letterSpacing:2, textTransform:"uppercase", color:"#f0ece4", margin:0 }}>Gerenciar Categorias</h3>
-              <button style={{ background:"transparent", border:"1px solid #333", color:"#777", borderRadius:4, padding:"5px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setShowCatManager(false)}>X Fechar</button>
+              <button style={{ background:"transparent", border:"1px solid #333", color:"#777", borderRadius:9, padding:"5px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setShowCatManager(false)}>X Fechar</button>
             </div>
             <p style={{ fontSize:12, fontFamily:"monospace", color:"#555", marginBottom:16, lineHeight:1.6 }}>
               Toque no quadrado colorido para mudar a cor. Toque no nome para renomear.
@@ -1405,15 +1408,15 @@ export default function App() {
               <div key={cat.id} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                 <input type="color" value={cat.color}
                   onChange={e => setCategories(prev => prev.map((c,i) => i===idx ? {...c, color:e.target.value} : c))}
-                  style={{ width:36, height:36, border:"none", background:"none", cursor:"pointer", borderRadius:6, flexShrink:0, padding:2 }}
+                  style={{ width:36, height:36, border:"none", background:"none", cursor:"pointer", borderRadius:11, flexShrink:0, padding:2 }}
                 />
                 <input
-                  style={{ flex:1, background:"#111", border:"1px solid #2a2a2a", borderRadius:6, padding:"10px 12px", color:"#f0ece4", fontSize:15, fontFamily:"monospace", outline:"none" }}
+                  style={{ flex:1, background:"#111", border:"1px solid #2a2a2a", borderRadius:11, padding:"10px 12px", color:"#f0ece4", fontSize:15, fontFamily:"monospace", outline:"none" }}
                   value={cat.name}
                   onChange={e => setCategories(prev => prev.map((c,i) => i===idx ? {...c, name:e.target.value} : c))}
                 />
                 <button
-                  style={{ background:"transparent", border:"1px solid #e74c3c44", color:"#e74c3c", borderRadius:6, padding:"8px 12px", cursor:"pointer", fontSize:14, flexShrink:0 }}
+                  style={{ background:"transparent", border:"1px solid #e74c3c44", color:"#e74c3c", borderRadius:11, padding:"8px 12px", cursor:"pointer", fontSize:14, flexShrink:0 }}
                   onClick={() => {
                     if (window.confirm("Remover " + cat.name + "?")) {
                       setCategories(prev => prev.filter(c => c.id !== cat.id));
@@ -1422,7 +1425,7 @@ export default function App() {
               </div>
             ))}
             <button
-              style={{ width:"100%", marginTop:12, background:"#1a1a1a", border:"1px solid #333", color:"#aaa", borderRadius:6, padding:"12px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              style={{ width:"100%", marginTop:12, background:"#1a1a1a", border:"1px solid #333", color:"#aaa", borderRadius:11, padding:"12px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
               onClick={() => {
                 const name = prompt("Nome da nova categoria:");
                 if (!name || !name.trim()) return;
