@@ -324,39 +324,11 @@ const useDeezerPreview = () => {
       const params = new URLSearchParams({ track: songTitle, artist: searchArtist });
       const res = await fetch(`/api/deezer?${params}`);
       const data = await res.json();
-      const candidates = data.results || [];
-
-      // Normaliza texto p/ comparação (sem acento, minúsculo, só letras/números)
-      const norm = s => (s || "")
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-
-      const normSongTitle = norm(songTitle);
-      const normArtist = norm(searchArtist);
-      const isGenericArtist = !normArtist || ["various", "va", "varios", "coletanea"].some(g => normArtist.includes(g));
-
-      const titleMatches = c => {
-        const t = norm(c.title);
-        const words = normSongTitle.split(" ").filter(w => w.length > 2);
-        if (words.length === 0) return t.includes(normSongTitle) || normSongTitle.includes(t);
-        const hits = words.filter(w => t.includes(w)).length;
-        return hits / words.length >= 0.6;
-      };
-      const artistMatches = c => {
-        if (isGenericArtist) return true; // sem artista confiável p/ comparar (ex: coletâneas)
-        const a = norm(c.artist);
-        return a.includes(normArtist) || normArtist.includes(a);
-      };
-
-      // 1º: título e artista batendo. 2º: só título batendo (se artista era genérico).
-      const best = candidates.find(c => titleMatches(c) && artistMatches(c))
-        || (isGenericArtist ? candidates.find(c => titleMatches(c)) : null);
-
-      const preview = best?.preview;
+      const preview = data.results?.[0]?.preview;
 
       if (!preview) {
         setLoading(null);
-        alert("Prévia não encontrada com confiança (título/artista não bateram no Deezer). Prefiro não tocar a música errada.");
+        alert("Prévia não disponível para esta música no Deezer.");
         return;
       }
 
@@ -968,12 +940,6 @@ export default function App() {
   const [filterTrack, setFilterTrack] = useState("");
   const [selected, setSelected] = useState(null);
   const [view, setView] = useState("catalog"); // catalog | add | edit | detail
-  const catalogScrollY = useRef(0);
-  const openDetail = (r) => { catalogScrollY.current = window.scrollY; setSelected(r); setView("detail"); };
-  const backToCatalog = () => {
-    setSelected(null); setView("catalog");
-    requestAnimationFrame(() => window.scrollTo(0, catalogScrollY.current));
-  };
   const [viewMode, setViewMode] = useState("grid");
   const [scanning, setScanning] = useState(false);
   const [hovCard, setHovCard] = useState(null);
@@ -1185,7 +1151,7 @@ export default function App() {
 
       {/* Nav */}
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
-        <button style={nb(view==="catalog"&&!selected)} onClick={backToCatalog}><Icon.Grid size={16} /> CATÁLOGO</button>
+        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
         <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
         <button style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#999" }}>{results.length} disco{results.length!==1?"s":""}</span>}
@@ -1256,7 +1222,7 @@ export default function App() {
               <span style={{display:"flex",alignItems:"center",gap:6}}><Icon.Sort size={15} />{sortBy==="cat_alpha"?"Ordem":sortBy==="alpha_az"?"A→Z":sortBy==="alpha_za"?"Z→A":sortBy==="year_new"?"+ Novo":"+ Antigo"}</span>
             </button>
             {showSortMenu && (
-              <div style={{ position:"absolute", right:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:12, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
+              <div style={{ position:"absolute", left:0, top:"110%", background:"#111", border:"1px solid #2a2a2a", borderRadius:12, zIndex:100, minWidth:160, overflow:"hidden", boxShadow:"0 8px 24px #000" }}>
                 {[
                   ["cat_alpha","↕ Categoria + A→Z"],
                   ["alpha_az","A → Z"],
@@ -1283,7 +1249,7 @@ export default function App() {
                   const mt = matchedTracks(r);
                   return (
                     <div key={r.id} style={{ background:hovCard===r.id?"#141414":"#0c0c0c", border:`1px solid ${hovCard===r.id?"#2a2a2a":"#141414"}`, borderRadius:13, cursor:"pointer", overflow:"hidden", transition:"all 0.15s" }}
-                      onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>openDetail(r)}>
+                      onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                       {r.coverPhoto
                         ? <img src={r.coverPhoto} alt="capa" style={{ width:"100%", aspectRatio:"1", objectFit:"cover" }} />
                         : <div style={{ width:"100%", aspectRatio:"1", background:"#111", display:"flex", alignItems:"center", justifyContent:"center" }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:48}}>{r.coverEmoji}</span>:<Icon.Vinyl size={40} color="#3a3a3a" />}</div>
@@ -1322,7 +1288,7 @@ export default function App() {
                   return (
                     <div key={r.id}>
                       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:12, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
-                        onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>openDetail(r)}>
+                        onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
                         {r.coverPhoto
                           ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:11, flexShrink:0 }} />
                           : <div style={{ width:56, height:56, background:"#111", borderRadius:11, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:26}}>{r.coverEmoji}</span>:<Icon.Vinyl size={24} color="#3a3a3a" />}</div>
@@ -1363,7 +1329,7 @@ export default function App() {
       {view==="detail" && selected && (
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
-            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={backToCatalog}>← VOLTAR</button>
+            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               <Icon.Edit size={16} /> Editar disco
