@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
-const STORAGE_KEY = "jr-collection-records";
-const CATS_KEY = "jr-collection-categories";
+const _PREFIX = process.env.REACT_APP_USER_NAME
+  ? process.env.REACT_APP_USER_NAME.toLowerCase().replace(/[^a-z0-9]/g,"")
+  : "jr";
+const STORAGE_KEY = `${_PREFIX}-collection-records`;
+const CATS_KEY = `${_PREFIX}-collection-categories`;
 
 // ── Flat outline icon set (inherits color via currentColor) ────────────────
 const Icon = {
@@ -92,19 +95,12 @@ const Icon = {
   Warning: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
   ),
-  Shield: ({ size=16, color }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-  ),
-  Settings: ({ size=16, color }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  ),
 };
 
 const textColorFor = (hex) => {
   const r = parseInt(hex.slice(1,3),16);
   const g = parseInt(hex.slice(3,5),16);
   const b = parseInt(hex.slice(5,7),16);
-  // Perceived luminance formula
   const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
   return luminance > 0.55 ? "#111111" : "#ffffff";
 };
@@ -125,10 +121,9 @@ const saveCategories = (cats) => {
   try { localStorage.setItem(CATS_KEY, JSON.stringify(cats)); } catch {}
 };
 
-const DB_NAME = "JrCollectionDB";
+const DB_NAME = `${_PREFIX}CollectionDB`;
 const DB_VERSION = 1;
 
-// ── IndexedDB for covers (supports hundreds of MB) ────────────────────────
 let _db = null;
 const openDB = () => new Promise((resolve, reject) => {
   if (_db) { resolve(_db); return; }
@@ -140,18 +135,6 @@ const openDB = () => new Promise((resolve, reject) => {
   req.onsuccess = e => { _db = e.target.result; resolve(_db); };
   req.onerror = () => reject(req.error);
 });
-
-const dbGetCover = async (id) => {
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction("covers", "readonly");
-      const req = tx.objectStore("covers").get(String(id));
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
-    });
-  } catch { return null; }
-};
 
 const dbSetCover = async (id, dataUrl) => {
   try {
@@ -173,7 +156,6 @@ const dbGetAllCovers = async () => {
       const tx = db.transaction("covers", "readonly");
       const store = tx.objectStore("covers");
       const result = {};
-      // Get all keys and values in parallel — much faster than cursor
       const keysReq = store.getAllKeys();
       const valsReq = store.getAll();
       let keys, vals;
@@ -196,7 +178,6 @@ const dbGetAllCovers = async () => {
   } catch { return {}; }
 };
 
-// ── localStorage for catalog data (text only, small) ─────────────────────
 const loadRecords = () => {
   try {
     const s = localStorage.getItem(STORAGE_KEY);
@@ -206,18 +187,15 @@ const loadRecords = () => {
 
 const saveRecords = (records) => {
   try {
-    // Save catalog WITHOUT photos (keep localStorage small)
     const slim = records.map(({ coverPhoto, ...rest }) => rest);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
   } catch(e) { console.error("Save error:", e); }
 };
 
-// Save single cover to IndexedDB
 const saveSingleCover = async (id, dataUrl) => {
   await dbSetCover(id, dataUrl);
 };
 
-// Compress image to max ~100KB — aggressive but good quality for album art
 const compressImage = (dataUrl, maxWidth = 500) => new Promise(resolve => {
   if (!dataUrl) { resolve(null); return; }
   if (dataUrl.startsWith("http")) { resolve(dataUrl); return; }
@@ -231,7 +209,6 @@ const compressImage = (dataUrl, maxWidth = 500) => new Promise(resolve => {
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-        // Start with quality 0.7, reduce if still too big
         let result = canvas.toDataURL("image/jpeg", 0.7);
         if (result.length > 150000) result = canvas.toDataURL("image/jpeg", 0.5);
         if (result.length > 150000) result = canvas.toDataURL("image/jpeg", 0.35);
@@ -243,8 +220,6 @@ const compressImage = (dataUrl, maxWidth = 500) => new Promise(resolve => {
   } catch { resolve(dataUrl); }
 });
 
-// Download a Discogs URL and convert to compressed base64
-// This prevents expiring URLs — photo is stored permanently
 const fetchAndCompressUrl = (url) => new Promise(resolve => {
   if (!url || !url.startsWith("http")) { resolve(url); return; }
   const img = new Image();
@@ -262,11 +237,10 @@ const fetchAndCompressUrl = (url) => new Promise(resolve => {
       resolve(result && result.length > 100 ? result : url);
     } catch { resolve(url); }
   };
-  img.onerror = () => resolve(url); // keep URL if download fails
+  img.onerror = () => resolve(url);
   img.src = url;
 });
 
-// Export catalog as JSON file
 const exportCatalog = (records) => {
   const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records }, null, 2);
   const blob = new Blob([data], { type: "application/json" });
@@ -278,13 +252,12 @@ const exportCatalog = (records) => {
   URL.revokeObjectURL(url);
 };
 
-// Import catalog from JSON file
 const importCatalog = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = e => {
     try {
       const data = JSON.parse(e.target.result);
-      const records = data.records || data; // support both formats
+      const records = data.records || data;
       if (Array.isArray(records)) resolve(records);
       else reject(new Error("Formato inválido"));
     } catch { reject(new Error("Arquivo inválido")); }
@@ -293,26 +266,22 @@ const importCatalog = (file) => new Promise((resolve, reject) => {
   reader.readAsText(file);
 });
 
-// ── Deezer 30s preview ───────────────────────────────────────────────────
 const useDeezerPreview = () => {
   const [playing, setPlaying] = useState(null);
   const [loading, setLoading] = useState(null);
   const audioRef = useRef(null);
 
   const searchAndPlay = async (trackName, artist) => {
-    // Toggle if same track
     if (playing === trackName) {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setPlaying(null);
       return;
     }
-    // Stop current
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     setPlaying(null);
     setLoading(trackName);
 
     try {
-      // For compilations: "Artist - Song" → use track artist
       const songTitle = trackName.includes(" - ")
         ? trackName.split(" - ").slice(1).join(" - ")
         : trackName;
@@ -320,7 +289,6 @@ const useDeezerPreview = () => {
         ? trackName.split(" - ")[0]
         : (artist || "");
 
-      // Use our proxy to avoid CORS
       const params = new URLSearchParams({ track: songTitle, artist: searchArtist });
       const res = await fetch(`/api/deezer?${params}`);
       const data = await res.json();
@@ -414,10 +382,9 @@ const PhotoPicker = ({ value, onChange }) => {
 };
 const pBtn = { background: "transparent", border: "1px solid #f0c03077", color: "#f0c030", borderRadius: 9, padding: "8px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace" };
 
-// ── Scanner ───────────────────────────────────────────────────────────────
 function ScanOverlay({ onClose, onDetected }) {
   const videoRef = useRef(null), canvasRef = useRef(null), streamRef = useRef(null), fileRef = useRef(null);
-  const [phase, setPhase] = useState("camera"); // camera|preview|analyzing|result|manual|error
+  const [phase, setPhase] = useState("camera");
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const [errMsg, setErrMsg] = useState("");
@@ -473,7 +440,6 @@ function ScanOverlay({ onClose, onDetected }) {
         setResult(parsed);
         setAltResults(parsed.discogsResults || []);
         setPhase("result");
-        // If not found on Discogs but AI identified, set a warning flag
         if (parsed.foundOnDiscogs === false) {
           setErrMsg("Disco não encontrado no Discogs. Dados preenchidos pela IA — confira e complete as faixas.");
         } else {
@@ -525,8 +491,6 @@ function ScanOverlay({ onClose, onDetected }) {
       </div>
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, gap:20, overflowY:"auto" }}>
-
-        {/* Camera */}
         {phase==="camera" && !camErr && (<>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#999", textAlign:"center" }}>Aponte para a capa do disco e fotografe</p>
           <div style={{ position:"relative", width:"100%", maxWidth:460 }}>
@@ -552,7 +516,6 @@ function ScanOverlay({ onClose, onDetected }) {
           <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={handleFile}/>
         </>)}
 
-        {/* Preview */}
         {phase==="preview" && (<>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#999", textAlign:"center" }}>A foto ficou boa?</p>
           <img src={preview} alt="preview" style={{ width:"100%", maxWidth:380, borderRadius:12, border:"2px solid #1e1e1e" }}/>
@@ -568,14 +531,12 @@ function ScanOverlay({ onClose, onDetected }) {
           </div>
         </>)}
 
-        {/* Analyzing */}
         {phase==="analyzing" && (<>
           <div style={{ width:50, height:50, borderRadius:"50%", border:"3px solid #1e1e1e", borderTop:"3px solid #c0392b", animation:"spin 0.8s linear infinite" }}/>
           <p style={{ fontSize:15, fontFamily:"monospace", color:"#999" }}>Buscando disco…</p>
           <VinylSVG size={48} spin/>
         </>)}
 
-        {/* Result */}
         {phase==="result" && result && (<>
           <p style={{ fontFamily:"monospace", color: result.foundOnDiscogs===false ? "#f39c12" : "#2ecc71", fontSize:14, textAlign:"center" }}>
             {result.foundOnDiscogs===false ? <><Icon.Warning size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Identificado pela IA (não encontrado no Discogs)</> : <><Icon.Check size={14} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/> Disco identificado!</>}
@@ -600,7 +561,6 @@ function ScanOverlay({ onClose, onDetected }) {
             )}
           </div>
 
-          {/* Alternative results from Discogs */}
           {altResults.length > 1 && (
             <div style={{ width:"100%", maxWidth:460 }}>
               <p style={{ fontSize:12, fontFamily:"monospace", color:"#999", marginBottom:8 }}>Não é esse? Veja outras opções:</p>
@@ -628,7 +588,6 @@ function ScanOverlay({ onClose, onDetected }) {
           <button style={btn(true)} onClick={() => onDetected(result)}>+ Adicionar ao catálogo</button>
         </>)}
 
-        {/* Manual search */}
         {phase==="manual" && (<>
           {errMsg && <p style={{ fontFamily:"monospace", color:"#f39c12", fontSize:14, textAlign:"center", maxWidth:340 }}>{errMsg}</p>}
           <p style={{ fontFamily:"monospace", color:"#888", fontSize:14, textAlign:"center" }}>Digite o nome do disco para buscar no Discogs:</p>
@@ -648,19 +607,16 @@ function ScanOverlay({ onClose, onDetected }) {
           <button style={btn(false)} onClick={retry}>↩ Tirar outra foto</button>
         </>)}
 
-        {/* Error */}
         {phase==="error" && (<>
           <div style={{ display:"flex", justifyContent:"center" }}><Icon.Search size={48} color="#555" /></div>
           <p style={{ fontFamily:"monospace", color:"#e74c3c", fontSize:14, textAlign:"center", maxWidth:340 }}>{errMsg}</p>
           <button style={btn(true)} onClick={retry}>↩ Tentar novamente</button>
         </>)}
-
       </div>
     </div>
   );
 }
 
-// ── Form fields helper ────────────────────────────────────────────────────
 const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", location: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
 
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 9, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
@@ -685,23 +641,20 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
       });
       const data = await res.json();
       if (!data.error) {
-        // Show results list for user to pick — do NOT auto-fill
         const allResults = data.discogsResults || [];
-        // Add the top result to list if not already there
         if (data.album && !allResults.find(r => r.title === data.album)) {
           allResults.unshift({
-            id: null, // will re-fetch by name
+            id: null,
             title: `${data.artist} - ${data.album}`,
             year: data.year,
             label: data.label,
             cover: data.coverUrl,
             country: "",
-            _fullData: data, // carry full data for instant fill
+            _fullData: data,
           });
         }
         setDiscogsResults(allResults.length ? allResults : []);
         if (allResults.length === 0) {
-          // Nothing found at all — fill with what AI got
           setForm(p => ({
             ...p,
             artist: data.artist || p.artist,
@@ -753,14 +706,21 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
     setDiscogsLoading(false);
   };
 
+  const handleSaveAction = async () => {
+    const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
+    const coverPhoto = form.coverPhoto && !form.coverPhoto.startsWith("http")
+      ? await compressImage(form.coverPhoto)
+      : (form.coverPhoto || null);
+    onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
+  };
+
   return (
-    <div style={{ padding: 18, maxWidth: 480 }}>
+    <div style={{ padding: 18, maxWidth: 480, paddingBottom: 90 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ fontWeight: "normal", letterSpacing: 2, fontSize: 18, textTransform: "uppercase", margin: 0 }}>{title}</h2>
         <button style={{ background: "#f0c030", border: "1px solid #f0c030", color: "#111", borderRadius: 9, padding: "7px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", fontWeight: "bold", display:"flex", alignItems:"center", gap:6 }} onClick={onCancel}><Icon.Close size={15} /> Cancelar</button>
       </div>
 
-      {/* Discogs search block */}
       <div style={{ marginBottom: 20, background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 12, overflow: "hidden" }}>
         <button
           style={{ width: "100%", background: showDiscogs ? "#1a1a1a" : "transparent", border: "none", color: "#4db8ff", padding: "12px 16px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", textAlign: "left", display: "flex", alignItems: "center", gap: 10 }}
@@ -819,7 +779,6 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         )}
       </div>
 
-      {/* Tipo de disco */}
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Tipo de disco</label>
         <div style={{ display:"flex", gap:8 }}>
@@ -861,7 +820,6 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         </div>
       </div>
 
-      {/* Location field */}
       <div style={{ marginBottom: 16 }}>
         <label style={{ ...lStyle, display:"flex", alignItems:"center", gap:6 }}><Icon.Pin size={15} color="#c0392b" /> Localização (onde está o disco)</label>
         <div style={{ position:"relative" }}>
@@ -875,7 +833,6 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         </div>
       </div>
 
-      {/* Wash status selector */}
       <div style={{ marginBottom: 16 }}>
         <label style={lStyle}>Status de lavagem</label>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -913,24 +870,35 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         Disco tem riscos
       </label>
 
-      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={async () => {
-        const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
-        // Compress only data URLs (not http URLs from Discogs)
-        const coverPhoto = form.coverPhoto && !form.coverPhoto.startsWith("http")
-          ? await compressImage(form.coverPhoto)
-          : (form.coverPhoto || null);
-        onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
-      }}>SALVAR</button>
+      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={handleSaveAction}>SALVAR</button>
+
+      {/* Barra fixa inferior para formulários (Voltar, Cancelar, Salvar) */}
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center", justifyContent: "space-between" }}>
+        <button
+          onClick={onCancel}
+          style={{ background: "#f0c030", border: "none", color: "#111", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+          ← Voltar
+        </button>
+        <button
+          onClick={onCancel}
+          style={{ background: "#e67e22", border: "none", color: "#fff", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+          Cancelar
+        </button>
+        <button
+          onClick={handleSaveAction}
+          style={{ background: "#27ae60", border: "none", color: "#fff", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+          Salvar ✓
+        </button>
+      </div>
     </div>
   );
 }
 
-// ── Main App ──────────────────────────────────────────────────────────────
 export default function App() {
   const [records, setRecords] = useState(() => loadRecords() || DEMO_DATA);
   const [categories, setCategories] = useState(() => loadCategories());
   const [filterCat, setFilterCat] = useState(null);
-  const [sortBy, setSortBy] = useState("cat_alpha"); // cat_alpha | alpha_az | alpha_za | year_new | year_old
+  const [sortBy, setSortBy] = useState("cat_alpha");
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showCatManager, setShowCatManager] = useState(false);
   const { playing, loading, searchAndPlay, stop } = useDeezerPreview();
@@ -939,14 +907,31 @@ export default function App() {
   const [filterArtist, setFilterArtist] = useState("");
   const [filterTrack, setFilterTrack] = useState("");
   const [selected, setSelected] = useState(null);
-  const [view, setView] = useState("catalog"); // catalog | add | edit | detail
+  const [view, setView] = useState("catalog");
   const [viewMode, setViewMode] = useState("grid");
   const [scanning, setScanning] = useState(false);
   const [hovCard, setHovCard] = useState(null);
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
+  const [showTopBtn, setShowTopBtn] = useState(false);
 
-  // Load covers from IndexedDB immediately on startup
+  // Monitorar rolagem para exibir o botão TOPO na página inicial
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowTopBtn(true);
+      } else {
+        setShowTopBtn(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   useEffect(() => {
     dbGetAllCovers().then(covers => {
       if (Object.keys(covers).length > 0) {
@@ -959,7 +944,6 @@ export default function App() {
     }).catch(() => setCoversLoaded(true));
   }, []);
 
-  // Save catalog (text only) whenever records change
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCategories(categories); }, [categories]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
@@ -969,32 +953,24 @@ export default function App() {
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
     return records.filter(r => {
-      // Category button filter
       if (filterCat && r.tipo !== filterCat) return false;
-      // Artista/Disco filter — busca no nome do artista e título do álbum
-      // Para coletâneas também busca na parte do artista de cada faixa ("Artista - Música")
       if (fa) {
         const inArtist = r.artist.toLowerCase().includes(fa);
         const inAlbum  = r.album.toLowerCase().includes(fa);
-        // In compilations, also check artist part of tracks ("Artist - Song")
         const inTrackArtist = r.tracks.some(t => {
           const parts = t.split(" - ");
           return parts.length > 1 && parts[0].toLowerCase().includes(fa);
         });
         if (!inArtist && !inAlbum && !inTrackArtist) return false;
       }
-      // Música filter — busca APENAS no título da música, ignorando o artista
-      // Para "Elton John - I Don't Want...", busca só em "I Don't Want..."
       if (ft) {
         const hasMatch = r.tracks.some(t => {
           const parts = t.split(" - ");
-          // If format is "Artist - Song", search only in song part
           const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
           return songPart.toLowerCase().includes(ft);
         });
         if (!hasMatch) return false;
       }
-      // General search
       if (!q) return true;
       return (
         r.artist.toLowerCase().includes(q) ||
@@ -1015,7 +991,6 @@ export default function App() {
         if (cmp !== 0) return cmp;
         return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
       }
-      // default: cat_alpha — by category order then alphabetically
       const catIds = categories.map(c => c.id);
       const ta = catIds.indexOf(a.tipo || catIds[0]);
       const tb = catIds.indexOf(b.tipo || catIds[0]);
@@ -1028,7 +1003,6 @@ export default function App() {
 
   const matchedTracks = (r) => {
     if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
-      // Artist filter: show tracks where artist part matches (for compilations)
       return r.tracks.filter(t => {
         const parts = t.split(" - ");
         return parts.length > 1 && parts[0].toLowerCase().includes(filterArtist.toLowerCase());
@@ -1037,7 +1011,6 @@ export default function App() {
     const term = filterTrack || query;
     if (!term.trim()) return [];
     if (filterTrack.trim()) {
-      // Music filter: show tracks where SONG part matches (not artist part)
       return r.tracks.filter(t => {
         const parts = t.split(" - ");
         const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
@@ -1062,7 +1035,6 @@ export default function App() {
     let coverPhoto = data.coverPhoto || null;
     if (coverPhoto) {
       if (coverPhoto.startsWith("http")) {
-        // Convert Discogs URL to permanent base64
         coverPhoto = await fetchAndCompressUrl(coverPhoto);
       } else {
         coverPhoto = await compressImage(coverPhoto);
@@ -1074,7 +1046,6 @@ export default function App() {
     showToast(`"${data.album}" adicionado! 🎵`);
     setView("catalog");
   };
-
 
   const updateRecord = async (data) => {
     let coverPhoto = data.coverPhoto || null;
@@ -1101,15 +1072,6 @@ export default function App() {
     showToast("Disco identificado! Confira e salve ✓");
   };
 
-  const washNow = (id) => {
-    const today = new Date().toISOString().split("T")[0];
-    const updated = records.map(r => r.id === id ? { ...r, washed: true, washedDate: today } : r);
-    setRecords(updated);
-    const upd = updated.find(r => r.id === id);
-    if (selected?.id === id) setSelected(upd);
-    showToast("Lavagem registrada! 💧");
-  };
-
   const deleteRecord = (id) => {
     if (!window.confirm("Remover este disco?")) return;
     setRecords(p => p.filter(r => r.id !== id));
@@ -1119,7 +1081,7 @@ export default function App() {
   const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#f0c03055"}`, color: active ? "#fff" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 });
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden" }}>
+    <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden", paddingBottom: view === "detail" ? 70 : 0 }}>
       <style>{`
         @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
         input::placeholder,textarea::placeholder{color:#2a8080}
@@ -1131,12 +1093,11 @@ export default function App() {
       {scanning && <ScanOverlay onClose={() => setScanning(false)} onDetected={handleScanDetected} />}
       {toast && <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#111", border:"1px solid #c0392b55", color:"#f0ece4", padding:"12px 24px", borderRadius:12, fontFamily:"monospace", fontSize:14, zIndex:500, whiteSpace:"nowrap", boxShadow:"0 4px 20px #000" }}>{toast}</div>}
 
-      {/* Header */}
       <div style={{ background:"linear-gradient(180deg,#130707 0%,#0a0a0a 100%)", borderBottom:"1px solid #1a1a1a", padding:"18px 18px 14px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
           <img src="/icon-192.png" alt="JR Collection" style={{ width:64, height:64, borderRadius:14, flexShrink:0 }} />
           <div>
-            <h1 style={{ fontSize:32, fontWeight:"normal", letterSpacing:3, color:"#f0ece4", margin:"0 0 3px" }}>Jr Collection</h1>
+            <h1 style={{ fontSize:32, fontWeight:"normal", letterSpacing:3, color:"#f0ece4", margin:"0 0 3px" }}>{process.env.REACT_APP_USER_NAME ? `${process.env.REACT_APP_USER_NAME} Collection` : "Jr Collection"}</h1>
             <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:3, textTransform:"uppercase" }}>Discos-LP</div>
             <div style={{ fontSize:13, color:"#999", letterSpacing:1, fontFamily:"monospace", marginTop:2 }}>{records.length} disco{records.length!==1?"s":""} no catálogo</div>
           </div>
@@ -1149,7 +1110,6 @@ export default function App() {
         )}
       </div>
 
-      {/* Nav */}
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
         <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
         <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
@@ -1166,7 +1126,6 @@ export default function App() {
             try {
               const imported = await importCatalog(file);
               if (window.confirm(`Importar ${imported.length} discos? Isso VAI SUBSTITUIR seu catálogo atual.`)) {
-                // Convert any URL covers to base64 on import
                 showToast("Importando... aguarde");
                 const fixed = await Promise.all(imported.map(async r => {
                   if (r.coverPhoto && r.coverPhoto.startsWith("http")) {
@@ -1191,9 +1150,7 @@ export default function App() {
         </label>
       </div>
 
-      {/* ── Catalog ── */}
       {view==="catalog" && !selected && (<>
-        {/* Category filter buttons */}
         <div style={{ display:"flex", gap:6, padding:"10px 18px", borderBottom:"1px solid #111", flexWrap:"wrap", alignItems:"center" }}>
           <button style={{ background:filterCat===null?"#f0ece4":"transparent", border:`1px solid ${filterCat===null?"#f0ece4":"#f0c03066"}`, color:filterCat===null?"#0a0a0a":"#d4af6a", borderRadius:20, padding:"5px 14px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setFilterCat(null)}>Todos</button>
           {categories.map(cat => (
@@ -1323,9 +1280,17 @@ export default function App() {
                 })}
               </div>
         }
+
+        {/* Botão flutuante TOPO */}
+        {showTopBtn && (
+          <button
+            onClick={scrollToTop}
+            style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: "#f0c030", border: "none", color: "#111", borderRadius: 20, padding: "10px 24px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", boxShadow: "0 4px 16px rgba(0,0,0,0.6)", zIndex: 400 }}>
+            ▲ TOPO
+          </button>
+        )}
       </>)}
 
-      {/* ── Detail ── */}
       {view==="detail" && selected && (
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
@@ -1389,11 +1354,23 @@ export default function App() {
               <button onClick={stop} style={{ background:"transparent", border:"1px solid #5EEDED44", color:"#5EEDED", borderRadius:9, padding:"4px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6 }}><Icon.Pause size={11} /> parar</button>
             </div>
           )}
+
+          {/* Barra inferior fixa para a página de detalhes do disco */}
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center" }}>
+            <button
+              onClick={() => { setView("catalog"); setSelected(null); }}
+              style={{ background: "#f0c030", border: "none", color: "#111", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+              ← Voltar ao Catálogo
+            </button>
+            <button
+              onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}
+              style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+              Editar Disco
+            </button>
+          </div>
         </div>
       )}
 
-
-      {/* Category Manager Modal */}
       {showCatManager && (
         <div style={{ position:"fixed", inset:0, background:"#000000cc", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
           <div style={{ background:"#0e0e0e", border:"1px solid #222", borderRadius:14, padding:24, width:"100%", maxWidth:420, maxHeight:"80vh", overflowY:"auto" }}>
@@ -1436,7 +1413,7 @@ export default function App() {
           </div>
         </div>
       )}
-      {/* ── Add ── */}
+
       {view==="add" && (
         <RecordForm
           initial={editForm || EMPTY_FORM}
@@ -1447,7 +1424,6 @@ export default function App() {
         />
       )}
 
-      {/* ── Edit ── */}
       {view==="edit" && selected && editForm && (
         <RecordForm
           initial={editForm}
