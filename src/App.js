@@ -741,7 +741,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
                 autoFocus
               />
               <button
-                style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "10px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", opacity: discogsLoading ? 0.6 : 1 }}
+                style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 9, padding: "10px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", opacity: discogsLoading ? 0.6 : 1 }}
                 onClick={searchDiscogs} disabled={discogsLoading}>
                 {discogsLoading ? "…" : "Buscar"}
               </button>
@@ -870,9 +870,8 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         Disco tem riscos
       </label>
 
-      <button style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={handleSaveAction}>SALVAR</button>
+      <button style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={handleSaveAction}>SALVAR</button>
 
-      {/* Barra fixa inferior para formulários (Voltar, Cancelar, Salvar) */}
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center", justifyContent: "space-between" }}>
         <button
           onClick={onCancel}
@@ -886,7 +885,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         </button>
         <button
           onClick={handleSaveAction}
-          style={{ background: "#27ae60", border: "none", color: "#fff", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+          style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
           Salvar ✓
         </button>
       </div>
@@ -915,7 +914,6 @@ export default function App() {
   const [editForm, setEditForm] = useState(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
 
-  // Monitorar rolagem para exibir o botão TOPO na página inicial
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 300) {
@@ -1078,8 +1076,6 @@ export default function App() {
     setSelected(null); setView("catalog"); showToast("Disco removido.");
   };
 
-  const nb = (active) => ({ background: active ? "#c0392b" : "transparent", border: `1px solid ${active ? "#c0392b" : "#f0c03055"}`, color: active ? "#fff" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 });
-
   return (
     <div style={{ minHeight: "100dvh", background: "#0a0a0a", color: "#f0ece4", fontFamily: "'Georgia','Times New Roman',serif", overflowX: "hidden", paddingBottom: view === "detail" ? 70 : 0 }}>
       <style>{`
@@ -1111,8 +1107,8 @@ export default function App() {
       </div>
 
       <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
-        <button style={nb(view==="catalog"&&!selected)} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
-        <button style={nb(view==="add")} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
+        <button style={{ background: view==="catalog"&&!selected ? "#c0392b22" : "transparent", border: `1px solid ${view==="catalog"&&!selected ? "#c0392b66" : "#f0c03055"}`, color: view==="catalog"&&!selected ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
+        <button style={{ background: view==="add" ? "#c0392b22" : "transparent", border: `1px solid ${view==="add" ? "#c0392b66" : "#f0c03055"}`, color: view==="add" ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
         <button style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#999" }}>{results.length} disco{results.length!==1?"s":""}</span>}
         <button style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
@@ -1169,8 +1165,8 @@ export default function App() {
             <input style={{ width:"100%", background:"#0e0e0e", border:"1px solid #2a2a2a", color:"#5EEDED", borderRadius:9, padding:"9px 12px 9px 32px", fontSize:15, fontFamily:"monospace", outline:"none", boxSizing:"border-box" }} placeholder="Música" value={filterTrack} onChange={e => setFilterTrack(e.target.value)} />
           </div>
           <div style={{ display:"flex", border:"1px solid #f0c03066", borderRadius:9, overflow:"hidden" }}>
-            <button style={{ background:viewMode==="grid"?"#c0392b":"transparent", border:"none", color:viewMode==="grid"?"#fff":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={18} /></button>
-            <button style={{ background:viewMode==="list"?"#c0392b":"transparent", border:"none", color:viewMode==="list"?"#fff":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={18} /></button>
+            <button style={{ background:viewMode==="grid"?"#c0392b22":"transparent", border:"none", color:viewMode==="grid"?"#ff8080":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("grid")}><Icon.Grid size={18} /></button>
+            <button style={{ background:viewMode==="list"?"#c0392b22":"transparent", border:"none", color:viewMode==="list"?"#ff8080":"#d4af6a", padding:"8px 14px", cursor:"pointer", display:"flex", alignItems:"center" }} onClick={() => setViewMode("list")}><Icon.List size={18} /></button>
           </div>
           <div style={{ position:"relative" }}>
             <button
@@ -1188,7 +1184,7 @@ export default function App() {
                   ["year_old","Ano: mais antigo"],
                 ].map(([val, label]) => (
                   <button key={val}
-                    style={{ display:"block", width:"100%", textAlign:"left", background: sortBy===val?"#c0392b22":"transparent", border:"none", borderBottom:"1px solid #1a1a1a", color: sortBy===val?"#c0392b":"#aaa", padding:"11px 16px", cursor:"pointer", fontSize:13, fontFamily:"monospace" }}
+                    style={{ display:"block", width:"100%", textAlign:"left", background: sortBy===val?"#c0392b22":"transparent", border:"none", borderBottom:"1px solid #1a1a1a", color: sortBy===val?"#ff8080":"#aaa", padding:"11px 16px", cursor:"pointer", fontSize:13, fontFamily:"monospace" }}
                     onClick={() => { setSortBy(val); setShowSortMenu(false); }}>
                     {sortBy===val && <Icon.Check size={12} style={{display:"inline",verticalAlign:"middle",marginRight:6}}/>}{label}
                   </button>
@@ -1281,7 +1277,6 @@ export default function App() {
               </div>
         }
 
-        {/* Botão flutuante TOPO */}
         {showTopBtn && (
           <button
             onClick={scrollToTop}
@@ -1295,7 +1290,7 @@ export default function App() {
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
             <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
-            <button style={{ background:"#c0392b22", border:"1px solid #c0392b55", color:"#f0ece4", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
+            <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               <Icon.Edit size={16} /> Editar disco
             </button>
@@ -1355,7 +1350,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Barra inferior fixa para a página de detalhes do disco */}
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center" }}>
             <button
               onClick={() => { setView("catalog"); setSelected(null); }}
@@ -1364,7 +1358,7 @@ export default function App() {
             </button>
             <button
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}
-              style={{ background: "#c0392b", border: "none", color: "#fff", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+              style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
               Editar Disco
             </button>
           </div>
