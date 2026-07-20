@@ -886,7 +886,7 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         <button
           onClick={handleSaveAction}
           style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
-          Salvar ✓
+          SALVAR
         </button>
       </div>
     </div>
