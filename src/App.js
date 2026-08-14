@@ -951,18 +951,16 @@ export default function App() {
     const fa = filterArtist.toLowerCase().trim();
     const ft = filterTrack.toLowerCase().trim();
     return records.filter(r => {
+      if (!r) return false;
+      const artist = typeof r.artist === "string" ? r.artist : "";
+      const album = typeof r.album === "string" ? r.album : "";
+      const label = typeof r.label === "string" ? r.label : "";
+      const tracks = Array.isArray(r.tracks) ? r.tracks : [];
       if (filterCat && r.tipo !== filterCat) return false;
-      if (fa) {
-        const inArtist = r.artist.toLowerCase().includes(fa);
-        const inAlbum  = r.album.toLowerCase().includes(fa);
-        const inTrackArtist = r.tracks.some(t => {
-          const parts = t.split(" - ");
-          return parts.length > 1 && parts[0].toLowerCase().includes(fa);
-        });
-        if (!inArtist && !inAlbum && !inTrackArtist) return false;
-      }
+      if (fa && !artist.toLowerCase().includes(fa)) return false;
       if (ft) {
-        const hasMatch = r.tracks.some(t => {
+        const hasMatch = tracks.some(t => {
+          if (typeof t !== "string") return false;
           const parts = t.split(" - ");
           const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
           return songPart.toLowerCase().includes(ft);
@@ -971,10 +969,10 @@ export default function App() {
       }
       if (!q) return true;
       return (
-        r.artist.toLowerCase().includes(q) ||
-        r.album.toLowerCase().includes(q) ||
-        r.label?.toLowerCase().includes(q) ||
-        r.tracks.some(t => t.toLowerCase().includes(q))
+        artist.toLowerCase().includes(q) ||
+        album.toLowerCase().includes(q) ||
+        label.toLowerCase().includes(q) ||
+        tracks.some(t => typeof t === "string" && t.toLowerCase().includes(q))
       );
     }).sort((a, b) => {
       if (sortBy === "year_new") return (b.year||0) - (a.year||0);
@@ -1000,22 +998,19 @@ export default function App() {
   }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy]);
 
   const matchedTracks = (r) => {
-    if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
-      return r.tracks.filter(t => {
-        const parts = t.split(" - ");
-        return parts.length > 1 && parts[0].toLowerCase().includes(filterArtist.toLowerCase());
-      });
-    }
+    const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
+    if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) return [];
     const term = filterTrack || query;
     if (!term.trim()) return [];
     if (filterTrack.trim()) {
-      return r.tracks.filter(t => {
+      return tracks.filter(t => {
+        if (typeof t !== "string") return false;
         const parts = t.split(" - ");
         const songPart = parts.length > 1 ? parts.slice(1).join(" - ") : t;
         return songPart.toLowerCase().includes(term.toLowerCase());
       });
     }
-    return r.tracks.filter(t => t.toLowerCase().includes(term.toLowerCase()));
+    return tracks.filter(t => typeof t === "string" && t.toLowerCase().includes(term.toLowerCase()));
   };
 
   const hlTerm = filterTrack || filterArtist || query;
