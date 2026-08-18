@@ -188,8 +188,13 @@ const loadRecords = () => {
 const saveRecords = (records) => {
   try {
     const slim = records.map(({ coverPhoto, ...rest }) => rest);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(slim));
-  } catch(e) { console.error("Save error:", e); }
+    const serialized = JSON.stringify(slim);
+    localStorage.setItem(STORAGE_KEY, serialized);
+    return localStorage.getItem(STORAGE_KEY) === serialized;
+  } catch(e) {
+    console.error("Save error:", e);
+    return false;
+  }
 };
 
 const saveSingleCover = async (id, dataUrl) => {
@@ -622,6 +627,12 @@ const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 9, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#999", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
 
+const UncategorizedBadge = ({ compact = false }) => (
+  <span style={{ fontSize:compact?9:12, background:"#77777722", color:"#aaa", border:"1px solid #77777744", borderRadius:9, padding:compact?"1px 5px":"3px 10px", fontFamily:"monospace", flexShrink:0 }}>
+    {compact ? "SEM CAT." : "Sem categoria"}
+  </span>
+);
+
 function RecordForm({ initial, onSave, onCancel, title, categories }) {
   const [form, setForm] = useState(initial);
   const [discogsQuery, setDiscogsQuery] = useState("");
@@ -781,6 +792,9 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
 
       <div style={{ marginBottom: 18 }}>
         <label style={lStyle}>Tipo de disco</label>
+        {!categories.some(cat => cat.id === form.tipo) && (
+          <div style={{ marginBottom:8 }}><UncategorizedBadge /></div>
+        )}
         <div style={{ display:"flex", gap:8 }}>
           {categories.map(cat => {
             const CatIcon = cat.id==="banda" ? Icon.Person : cat.id==="novela" ? Icon.Tv : cat.id==="coletanea" ? Icon.People : Icon.Tag;
@@ -988,9 +1002,11 @@ export default function App() {
         return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
       }
       const catIds = categories.map(c => c.id);
-      const ta = catIds.indexOf(a.tipo || catIds[0]);
-      const tb = catIds.indexOf(b.tipo || catIds[0]);
-      if (ta !== tb) return (ta === -1 ? 999 : ta) - (tb === -1 ? 999 : tb);
+      const ta = catIds.indexOf(a.tipo);
+      const tb = catIds.indexOf(b.tipo);
+      const orderA = ta === -1 ? catIds.length : ta;
+      const orderB = tb === -1 ? catIds.length : tb;
+      if (orderA !== orderB) return orderA - orderB;
       const artistCmp = (a.artist||"").localeCompare(b.artist||"", "pt-BR", {sensitivity:"base"});
       if (artistCmp !== 0) return artistCmp;
       return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
@@ -1069,6 +1085,32 @@ export default function App() {
     if (!window.confirm("Remover este disco?")) return;
     setRecords(p => p.filter(r => r.id !== id));
     setSelected(null); setView("catalog"); showToast("Disco removido.");
+  };
+
+  const deleteCategory = (cat) => {
+    const affectedCount = records.filter(r => r && r.tipo === cat.id).length;
+    if (affectedCount === 0) {
+      setCategories(prev => prev.filter(c => c.id !== cat.id));
+      return;
+    }
+
+    const discLabel = affectedCount === 1 ? "1 disco" : `${affectedCount} discos`;
+    const confirmed = window.confirm(
+      `A categoria ‘${cat.name}’ contém ${discLabel}. Tem certeza de que deseja excluir esta categoria? Somente a categoria será excluída. Os discos continuarão salvos e ficarão sem categoria.`
+    );
+    if (!confirmed) return;
+
+    const updatedRecords = records.map(r =>
+      r && r.tipo === cat.id ? { ...r, tipo: null } : r
+    );
+    if (!saveRecords(updatedRecords)) {
+      window.alert("Não foi possível salvar os discos sem categoria. A categoria não foi excluída.");
+      return;
+    }
+
+    setRecords(updatedRecords);
+    setCategories(prev => prev.filter(c => c.id !== cat.id));
+    showToast(`Categoria “${cat.name}” excluída. ${discLabel} preservado${affectedCount === 1 ? "" : "s"} sem categoria.`);
   };
 
   return (
@@ -1205,7 +1247,7 @@ export default function App() {
                       <div style={{ padding:"12px 12px 14px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:4 }}>
                           <div style={{ fontSize:12, color:"#c0392b", fontFamily:"monospace", letterSpacing:1, textTransform:"uppercase", flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}><Hl text={r.artist}/></div>
-                          {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
+                          {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : <UncategorizedBadge compact />; })()}
                         </div>
                         <div style={{ fontSize:16, color:"#f0ece4", lineHeight:1.3, marginBottom:6 }}><Hl text={r.album}/></div>
                         <div style={{ fontSize:12, color:"#999", fontFamily:"monospace", marginBottom:10 }}>{r.year} · {r.genre}</div>
@@ -1244,7 +1286,7 @@ export default function App() {
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
                             <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
-                            {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : null; })()}
+                            {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : <UncategorizedBadge compact />; })()}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
                           <div style={{ fontSize:12, color:"#999", fontFamily:"monospace" }}>{r.year}{r.location ? <span style={{ color:"#5EEDED", marginLeft:8, display:"inline-flex", alignItems:"center", gap:4 }}><Icon.Pin size={11} /> {r.location}</span> : ""}</div>
@@ -1303,7 +1345,7 @@ export default function App() {
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
               {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:9, padding:"3px 10px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={13} /> tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
-                {(()=>{ const cat = categories.find(c=>c.id===selected.tipo) || categories[0]; return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : null; })()}
+                {(()=>{ const cat = categories.find(c=>c.id===selected.tipo); return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : <UncategorizedBadge />; })()}
               </div>
               {selected.location && (
                 <div style={{ marginTop:10, marginBottom:4, display:"flex", alignItems:"center", gap:8 }}>
@@ -1383,11 +1425,7 @@ export default function App() {
                 />
                 <button
                   style={{ background:"transparent", border:"1px solid #e74c3c44", color:"#e74c3c", borderRadius:11, padding:"8px 12px", cursor:"pointer", fontSize:14, flexShrink:0 }}
-                  onClick={() => {
-                    if (window.confirm("Remover " + cat.name + "?")) {
-                      setCategories(prev => prev.filter(c => c.id !== cat.id));
-                    }
-                  }}>Delete</button>
+                  onClick={() => deleteCategory(cat)}>Delete</button>
               </div>
             ))}
             <button
