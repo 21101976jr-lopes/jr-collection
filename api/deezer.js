@@ -74,6 +74,36 @@ const evaluateCandidate = (item, requested) => {
   return { accepted: true, score, confidenceScore };
 };
 
+const evaluateFallbackCandidate = (item, requested) => {
+  const candidateArtist = item.artist?.name || "";
+  const candidateTitle = item.title_short || item.title || "";
+  const candidateVersions = getVersionTypes(
+    item.title,
+    item.title_version,
+    candidateArtist,
+    item.album?.title
+  );
+
+  if (normalizeText(candidateArtist) !== normalizeText(requested.artist)) {
+    return { accepted: false, reason: "artist_mismatch" };
+  }
+  if (stripVersionParts(candidateTitle) !== stripVersionParts(requested.track)) {
+    return { accepted: false, reason: "title_mismatch" };
+  }
+  if (["cover", "tribute", "karaoke"].some(type => candidateVersions.has(type))) {
+    return { accepted: false, reason: "unsafe_version" };
+  }
+  if (!item.preview) return { accepted: false, reason: "preview_missing" };
+
+  const versionPriority = candidateVersions.size === 0
+    ? 0
+    : candidateVersions.size === 1 && candidateVersions.has("remaster")
+      ? 1
+      : 2;
+
+  return { accepted: true, versionPriority };
+};
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -93,16 +123,21 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     const requested = { track, artist, album, year, position };
-    const approved = (data.data || [])
+    const candidates = data.data || [];
+    const approved = candidates
       .map(item => ({ item, evaluation: evaluateCandidate(item, requested) }))
       .filter(({ evaluation }) => evaluation.accepted)
       .sort((a, b) => b.evaluation.score - a.evaluation.score);
 
-    if (approved.length > 1 && approved[0].evaluation.confidenceScore === approved[1].evaluation.confidenceScore) {
-      return res.status(200).json({ results: [] });
-    }
+    const selected = approved[0] || candidates
+      .map(item => ({ item, evaluation: evaluateFallbackCandidate(item, requested) }))
+      .filter(({ evaluation }) => evaluation.accepted)
+      .sort((a, b) =>
+        a.evaluation.versionPriority - b.evaluation.versionPriority ||
+        (Number(b.item.rank) || 0) - (Number(a.item.rank) || 0)
+      )[0];
 
-    const results = approved.slice(0, 1).map(({ item }) => ({
+    const results = selected ? [selected.item].map(item => ({
       id: item.id,
       title: item.title,
       title_short: item.title_short,
@@ -116,7 +151,7 @@ export default async function handler(req, res) {
       rank: item.rank,
       preview: item.preview,
       cover: item.album?.cover_small,
-    }));
+    })) : [];
 
     return res.status(200).json({ results });
   } catch (e) {
