@@ -276,7 +276,7 @@ const useDeezerPreview = () => {
   const [loading, setLoading] = useState(null);
   const audioRef = useRef(null);
 
-  const searchAndPlay = async (trackName, artist) => {
+  const searchAndPlay = async (trackName, record, trackPosition) => {
     if (playing === trackName) {
       if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       setPlaying(null);
@@ -292,16 +292,23 @@ const useDeezerPreview = () => {
         : trackName;
       const searchArtist = trackName.includes(" - ")
         ? trackName.split(" - ")[0]
-        : (artist || "");
+        : (record?.artist || "");
 
-      const params = new URLSearchParams({ track: songTitle, artist: searchArtist });
+      const params = new URLSearchParams({
+        track: songTitle,
+        artist: searchArtist,
+        album: record?.album || "",
+      });
+      if (record?.year) params.set("year", record.year);
+      if (trackPosition) params.set("position", trackPosition);
       const res = await fetch(`/api/deezer?${params}`);
+      if (!res.ok) throw new Error(`Preview search returned ${res.status}`);
       const data = await res.json();
       const preview = data.results?.[0]?.preview;
 
       if (!preview) {
         setLoading(null);
-        alert("Prévia não disponível para esta música no Deezer.");
+        alert("Prévia não disponível");
         return;
       }
 
@@ -313,7 +320,7 @@ const useDeezerPreview = () => {
       await audio.play();
       setPlaying(trackName);
     } catch(e) {
-      alert("Erro ao buscar prévia. Verifique sua conexão.");
+      alert("Prévia não disponível");
     }
     setLoading(null);
   };
@@ -1370,7 +1377,7 @@ export default function App() {
                   <span style={{ color:"#999", flexShrink:0, fontSize:12, minWidth:20 }}>{String(i+1).padStart(2,"0")}</span>
                   <span style={{ flex:1, lineHeight:1.3 }}>{t}</span>
                   <button
-                    onClick={() => searchAndPlay(t, selected.artist)}
+                    onClick={() => searchAndPlay(t, selected, i + 1)}
                     title={isPlaying?"Pausar":"Ouvir prévia de 30s"}
                     style={{ background:isPlaying?"#5EEDED22":"#111", border:`1px solid ${isPlaying?"#5EEDED66":"#f0c03066"}`, borderRadius:"50%", width:28, height:28, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, color:isPlaying?"#5EEDED":"#d4af6a", transition:"all 0.15s" }}>
                     {isLoading ? <div style={{ width:12, height:12, borderRadius:"50%", border:"2px solid #5EEDED33", borderTop:"2px solid #5EEDED", animation:"spin 0.7s linear infinite" }}/> : isPlaying ? <Icon.Pause size={12} /> : <Icon.Play size={12} />}
