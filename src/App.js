@@ -978,7 +978,16 @@ export default function App() {
       const label = typeof r.label === "string" ? r.label : "";
       const tracks = Array.isArray(r.tracks) ? r.tracks : [];
       if (filterCat && r.tipo !== filterCat) return false;
-      if (fa && !artist.toLowerCase().includes(fa)) return false;
+      if (fa) {
+        const hasArtistMatch = artist.toLowerCase().includes(fa) || tracks.some(t => {
+          if (typeof t !== "string") return false;
+          const separatorIndex = t.indexOf(" - ");
+          if (separatorIndex === -1) return false;
+          const trackArtist = t.slice(0, separatorIndex);
+          return trackArtist.toLowerCase().includes(fa);
+        });
+        if (!hasArtistMatch) return false;
+      }
       if (ft) {
         const hasMatch = tracks.some(t => {
           if (typeof t !== "string") return false;
