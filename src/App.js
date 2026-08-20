@@ -1031,7 +1031,16 @@ export default function App() {
 
   const matchedTracks = (r) => {
     const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
-    if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) return [];
+    if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
+      const artistTerm = filterArtist.toLowerCase().trim();
+      return tracks.filter(t => {
+        if (typeof t !== "string") return false;
+        const separatorIndex = t.indexOf(" - ");
+        if (separatorIndex === -1) return false;
+        const trackArtist = t.slice(0, separatorIndex);
+        return trackArtist.toLowerCase().includes(artistTerm);
+      });
+    }
     const term = filterTrack || query;
     if (!term.trim()) return [];
     if (filterTrack.trim()) {
@@ -1321,7 +1330,7 @@ export default function App() {
                               <span>{before}<span style={{ background:"#c0392b33", color:"#ff8080", padding:"0 2px", borderRadius:2 }}>{match}</span>{after}</span>
                             </div>;
                           })}
-                          {mt.length>2&&<div style={{ fontSize:11, color:"#999", fontFamily:"monospace" }}>+{mt.length-2} músicas</div>}
+                          {mt.length>2&&<div style={{ fontSize:11, color:"#999", fontFamily:"monospace" }}>+{mt.length-2} músicas{filterArtist.trim()&&!filterTrack.trim()&&!query.trim()?` com "${filterArtist}"`:""}</div>}
                         </div>
                       )}
                     </div>
