@@ -333,6 +333,36 @@ const useDeezerPreview = () => {
   return { playing, loading, searchAndPlay, stop };
 };
 
+const findTrackInterpreterMatch = (track, searchTerm) => {
+  if (typeof track !== "string" || typeof searchTerm !== "string") return null;
+  const term = searchTerm.toLowerCase().trim();
+  if (!term) return null;
+
+  const scoreSide = (value) => {
+    const normalized = value.replace(/\s+/g, " ").trim().toLowerCase();
+    if (!normalized || !normalized.includes(term)) return 0;
+    if (normalized === term) return 3000;
+    if (normalized.startsWith(term)) return 2000 + term.length / normalized.length;
+    return 1000 + term.length / normalized.length;
+  };
+
+  let bestMatch = null;
+  for (const match of track.matchAll(/[-–—]/g)) {
+    const separatorIndex = match.index;
+    const left = track.slice(0, separatorIndex).replace(/\s+/g, " ").trim();
+    const right = track.slice(separatorIndex + match[0].length).replace(/\s+/g, " ").trim();
+    if (!left || !right) continue;
+
+    for (const side of [left, right]) {
+      const score = scoreSide(side);
+      if (score && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { interpreter: side, score };
+      }
+    }
+  }
+  return bestMatch;
+};
+
 const DEMO_DATA = [
   { id: 1, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 1", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: true, washedDate: "2024-10-15", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["In the Flesh?","The Thin Ice","Another Brick in the Wall Pt.1","The Happiest Days","Another Brick in the Wall Pt.2","Mother","Goodbye Blue Sky","Empty Spaces","Young Lust","One of My Turns"] },
   { id: 2, tipo: "banda", artist: "Pink Floyd", album: "The Wall - Disco 2", year: 1979, genre: "Rock Progressivo", label: "Harvest", washed: false, washedDate: "2023-03-01", scratches: false, coverPhoto: null, coverEmoji: "🎸", tracks: ["Don't Leave Me Now","Another Brick in the Wall Pt.3","Goodbye Cruel World","Hey You","Is There Anybody Out There?","Nobody Home","Vera","Bring the Boys Back Home","Comfortably Numb","The Show Must Go On","In the Flesh","Run Like Hell","Waiting for the Worms","Stop","The Trial","Outside the Wall"] },
@@ -979,13 +1009,8 @@ export default function App() {
       const tracks = Array.isArray(r.tracks) ? r.tracks : [];
       if (filterCat && r.tipo !== filterCat) return false;
       if (fa) {
-        const hasArtistMatch = artist.toLowerCase().includes(fa) || tracks.some(t => {
-          if (typeof t !== "string") return false;
-          const separatorIndex = t.indexOf(" - ");
-          if (separatorIndex === -1) return false;
-          const trackArtist = t.slice(0, separatorIndex);
-          return trackArtist.toLowerCase().includes(fa);
-        });
+        const hasArtistMatch = artist.toLowerCase().includes(fa) ||
+          tracks.some(t => findTrackInterpreterMatch(t, fa));
         if (!hasArtistMatch) return false;
       }
       if (ft) {
@@ -1033,13 +1058,7 @@ export default function App() {
     const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
     if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
       const artistTerm = filterArtist.toLowerCase().trim();
-      return tracks.filter(t => {
-        if (typeof t !== "string") return false;
-        const separatorIndex = t.indexOf(" - ");
-        if (separatorIndex === -1) return false;
-        const trackArtist = t.slice(0, separatorIndex);
-        return trackArtist.toLowerCase().includes(artistTerm);
-      });
+      return tracks.filter(t => findTrackInterpreterMatch(t, artistTerm));
     }
     const term = filterTrack || query;
     if (!term.trim()) return [];
