@@ -659,7 +659,17 @@ function ScanOverlay({ onClose, onDetected }) {
   );
 }
 
-const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", location: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, tracks: "", coverPhoto: null, coverEmoji: "💿" };
+const getTrackEntries = (tracks) => {
+  const occurrences = new Map();
+  return (Array.isArray(tracks) ? tracks : []).map((track, index) => {
+    const text = typeof track === "string" ? track : "";
+    const occurrence = (occurrences.get(text) || 0) + 1;
+    occurrences.set(text, occurrence);
+    return { text, index, key: JSON.stringify([text, occurrence]) };
+  });
+};
+
+const EMPTY_FORM = { artist: "", album: "", year: "", genre: "", label: "", tipo: "banda", location: "", washed: false, washedDate: new Date().toISOString().split("T")[0], scratches: false, scratchedTrackKeys: [], tracks: "", coverPhoto: null, coverEmoji: "💿" };
 
 const fStyle = { width: "100%", background: "#0e0e0e", border: "1px solid #1e1e1e", borderRadius: 9, padding: "11px 14px", color: "#f0ece4", fontSize: 16, fontFamily: "monospace", outline: "none", boxSizing: "border-box" };
 const lStyle = { display: "block", fontSize: 12, fontFamily: "monospace", color: "#999", letterSpacing: 1, marginBottom: 6, textTransform: "uppercase" };
@@ -677,6 +687,20 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
   const [discogsLoading, setDiscogsLoading] = useState(false);
   const [showDiscogs, setShowDiscogs] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const editableTracks = typeof form.tracks === "string"
+    ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean)
+    : (Array.isArray(form.tracks) ? form.tracks : []);
+  const editableTrackEntries = getTrackEntries(editableTracks);
+  const selectedScratchKeys = new Set(Array.isArray(form.scratchedTrackKeys) ? form.scratchedTrackKeys : []);
+
+  const toggleScratchedTrack = (trackKey) => {
+    setForm(p => {
+      const current = new Set(Array.isArray(p.scratchedTrackKeys) ? p.scratchedTrackKeys : []);
+      if (current.has(trackKey)) current.delete(trackKey);
+      else current.add(trackKey);
+      return { ...p, scratchedTrackKeys: [...current] };
+    });
+  };
 
   const searchDiscogs = async () => {
     if (!discogsQuery.trim()) return;
@@ -756,10 +780,14 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
 
   const handleSaveAction = async () => {
     const tracks = typeof form.tracks === "string" ? form.tracks.split("\n").map(t => t.trim()).filter(Boolean) : form.tracks;
+    const validTrackKeys = new Set(getTrackEntries(tracks).map(track => track.key));
+    const scratchedTrackKeys = form.scratches
+      ? (Array.isArray(form.scratchedTrackKeys) ? form.scratchedTrackKeys : []).filter(key => validTrackKeys.has(key))
+      : [];
     const coverPhoto = form.coverPhoto && !form.coverPhoto.startsWith("http")
       ? await compressImage(form.coverPhoto)
       : (form.coverPhoto || null);
-    onSave({ ...form, tracks, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
+    onSave({ ...form, tracks, scratchedTrackKeys, year: parseInt(form.year) || new Date().getFullYear(), coverPhoto });
   };
 
   return (
@@ -921,6 +949,25 @@ function RecordForm({ initial, onSave, onCancel, title, categories }) {
         Disco tem riscos
       </label>
 
+      {form.scratches && editableTrackEntries.length > 0 && (
+        <div style={{ margin:"-8px 0 22px", background:"#0e0e0e", border:"1px solid #c0392b44", borderRadius:12, padding:12 }}>
+          <div style={{ ...lStyle, color:"#ff8080", marginBottom:10 }}>Selecionar faixas com risco</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+            {editableTrackEntries.map(track => {
+              const active = selectedScratchKeys.has(track.key);
+              return (
+                <button key={track.key} type="button" onClick={() => toggleScratchedTrack(track.key)}
+                  style={{ display:"flex", alignItems:"center", gap:9, width:"100%", textAlign:"left", background:active?"#c0392b22":"#111", border:`1px solid ${active?"#e74c3c88":"#252525"}`, color:active?"#ff8080":"#ccc", borderRadius:9, padding:"9px 10px", cursor:"pointer", fontSize:13, fontFamily:"monospace" }}>
+                  <span style={{ color:active?"#ff8080":"#777", minWidth:20 }}>{String(track.index+1).padStart(2,"0")}</span>
+                  <span style={{ flex:1 }}>{track.text}</span>
+                  {active && <Icon.Check size={15} />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <button style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 9, padding: "14px 32px", cursor: "pointer", fontSize: 15, fontFamily: "monospace", letterSpacing: 1 }} onClick={handleSaveAction}>SALVAR</button>
 
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center", justifyContent: "space-between" }}>
@@ -964,6 +1011,8 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const catalogScrollRef = useRef(0);
+  const restoreCatalogScrollRef = useRef(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -1072,6 +1121,33 @@ export default function App() {
     }
     return tracks.filter(t => typeof t === "string" && t.toLowerCase().includes(term.toLowerCase()));
   };
+
+  const openRecordDetails = (record) => {
+    catalogScrollRef.current = window.scrollY;
+    setSelected(record);
+    setView("detail");
+  };
+
+  const returnToCatalog = () => {
+    restoreCatalogScrollRef.current = true;
+    setView("catalog");
+    setSelected(null);
+  };
+
+  useEffect(() => {
+    if (view !== "catalog" || !restoreCatalogScrollRef.current) return;
+    let secondFrame;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        window.scrollTo({ top: catalogScrollRef.current, left: 0, behavior: "auto" });
+        restoreCatalogScrollRef.current = false;
+      });
+    });
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      if (secondFrame) cancelAnimationFrame(secondFrame);
+    };
+  }, [view, viewMode, results.length, coversLoaded]);
 
   const hlTerm = filterTrack || filterArtist || query;
 
@@ -1283,7 +1359,7 @@ export default function App() {
                   const mt = matchedTracks(r);
                   return (
                     <div key={r.id} style={{ background:hovCard===r.id?"#141414":"#0c0c0c", border:`1px solid ${hovCard===r.id?"#2a2a2a":"#141414"}`, borderRadius:13, cursor:"pointer", overflow:"hidden", transition:"all 0.15s" }}
-                      onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
+                      onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>openRecordDetails(r)}>
                       {r.coverPhoto
                         ? <img src={r.coverPhoto} alt="capa" style={{ width:"100%", aspectRatio:"1", objectFit:"cover" }} />
                         : <div style={{ width:"100%", aspectRatio:"1", background:"#111", display:"flex", alignItems:"center", justifyContent:"center" }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:48}}>{r.coverEmoji}</span>:<Icon.Vinyl size={40} color="#3a3a3a" />}</div>
@@ -1322,7 +1398,7 @@ export default function App() {
                   return (
                     <div key={r.id}>
                       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"13px 14px", background:hovCard===r.id?"#111":"transparent", borderRadius:12, cursor:"pointer", transition:"background 0.1s", borderBottom:"1px solid #111" }}
-                        onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>{ setSelected(r); setView("detail"); }}>
+                        onMouseEnter={()=>setHovCard(r.id)} onMouseLeave={()=>setHovCard(null)} onClick={()=>openRecordDetails(r)}>
                         {r.coverPhoto
                           ? <img src={r.coverPhoto} alt="capa" style={{ width:56, height:56, objectFit:"cover", borderRadius:11, flexShrink:0 }} />
                           : <div style={{ width:56, height:56, background:"#111", borderRadius:11, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>{r.coverEmoji&&r.coverEmoji!=="💿"?<span style={{fontSize:26}}>{r.coverEmoji}</span>:<Icon.Vinyl size={24} color="#3a3a3a" />}</div>
@@ -1370,7 +1446,7 @@ export default function App() {
       {view==="detail" && selected && (
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
-            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={()=>{ setView("catalog"); setSelected(null); }}>← VOLTAR</button>
+            <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={returnToCatalog}>← VOLTAR</button>
             <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               <Icon.Edit size={16} /> Editar disco
@@ -1387,7 +1463,7 @@ export default function App() {
               <h2 style={{ margin:"0 0 6px", fontSize:24, fontWeight:"normal", lineHeight:1.2 }}>{selected.album}</h2>
               <div style={{ fontSize:14, color:"#999", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
-              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:13, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:9, padding:"3px 10px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={13} /> tem riscos</span></div>}
+              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:14, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:9, padding:"4px 11px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={15} /> Tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
                 {(()=>{ const cat = categories.find(c=>c.id===selected.tipo); return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : <UncategorizedBadge />; })()}
               </div>
@@ -1404,13 +1480,14 @@ export default function App() {
 
           <div style={{ fontSize:13, fontFamily:"monospace", color:"#999", letterSpacing:1, marginBottom:8 }}>FAIXAS — {selected.tracks.length} <span style={{ color:"#999", fontSize:11 }}>▶ toque para ouvir 30s</span></div>
           <div style={{ background:"#0c0c0c", border:"1px solid #141414", borderRadius:12, padding:"6px 0" }}>
-            {selected.tracks.map((t,i)=>{
+            {getTrackEntries(selected.tracks).map(({ text:t, index:i, key:trackKey })=>{
               const q = filterTrack||query;
               const m = q && t.toLowerCase().includes(q.toLowerCase());
               const isPlaying = playing === t;
               const isLoading = loading === t;
+              const isScratched = selected.scratches && Array.isArray(selected.scratchedTrackKeys) && selected.scratchedTrackKeys.includes(trackKey);
               return (
-                <div key={i} style={{ padding:"8px 14px", fontSize:14, fontFamily:"monospace", color:m?"#ff8080":isPlaying?"#5EEDED":"#f0ece4", background:isPlaying?"#5EEDED0d":m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":isPlaying?"#5EEDED":"transparent"}`, display:"flex", alignItems:"center", gap:10 }}>
+                <div key={trackKey} style={{ padding:"8px 14px", fontSize:14, fontFamily:"monospace", color:isScratched?"#ff8080":m?"#ff8080":isPlaying?"#5EEDED":"#f0ece4", background:isPlaying?"#5EEDED0d":m?"#c0392b0c":"transparent", borderLeft:`3px solid ${m?"#c0392b":isPlaying?"#5EEDED":"transparent"}`, display:"flex", alignItems:"center", gap:10 }}>
                   <span style={{ color:"#999", flexShrink:0, fontSize:12, minWidth:20 }}>{String(i+1).padStart(2,"0")}</span>
                   <span style={{ flex:1, lineHeight:1.3 }}>{t}</span>
                   <button
@@ -1433,7 +1510,7 @@ export default function App() {
 
           <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: "#111", borderTop: "1px solid #222", padding: "10px 14px", display: "flex", gap: 8, zIndex: 300, boxSizing: "border-box", alignItems: "center" }}>
             <button
-              onClick={() => { setView("catalog"); setSelected(null); }}
+              onClick={returnToCatalog}
               style={{ background: "#f0c030", border: "none", color: "#111", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
               ← Voltar ao Catálogo
             </button>
@@ -1451,7 +1528,7 @@ export default function App() {
           <div style={{ background:"#0e0e0e", border:"1px solid #222", borderRadius:14, padding:24, width:"100%", maxWidth:420, maxHeight:"80vh", overflowY:"auto" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
               <h3 style={{ fontWeight:"normal", fontSize:16, letterSpacing:2, textTransform:"uppercase", color:"#f0ece4", margin:0 }}>Gerenciar Categorias</h3>
-              <button style={{ background:"transparent", border:"1px solid #333", color:"#999", borderRadius:9, padding:"5px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace" }} onClick={() => setShowCatManager(false)}>X Fechar</button>
+              <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"5px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", fontWeight:"bold" }} onClick={() => setShowCatManager(false)}>X Fechar</button>
             </div>
             <p style={{ fontSize:12, fontFamily:"monospace", color:"#999", marginBottom:16, lineHeight:1.6 }}>
               Toque no quadrado colorido para mudar a cor. Toque no nome para renomear.
@@ -1473,13 +1550,13 @@ export default function App() {
               </div>
             ))}
             <button
-              style={{ width:"100%", marginTop:12, background:"#1a1a1a", border:"1px solid #333", color:"#aaa", borderRadius:11, padding:"12px", cursor:"pointer", fontSize:14, fontFamily:"monospace" }}
+              style={{ width:"100%", marginTop:12, background:"transparent", border:"1px solid #f0c030", color:"#f0c030", borderRadius:11, padding:"12px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }}
               onClick={() => {
                 const name = prompt("Nome da nova categoria:");
                 if (!name || !name.trim()) return;
                 setCategories(prev => [...prev, { id:"cat_"+Date.now(), name:name.trim(), color:"#3498db" }]);
               }}>
-              + Nova categoria
+              + Adicionar nova categoria
             </button>
           </div>
         </div>
