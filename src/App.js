@@ -333,31 +333,56 @@ const useDeezerPreview = () => {
   return { playing, loading, searchAndPlay, stop };
 };
 
-const findTrackInterpreterMatch = (track, searchTerm) => {
+const normalizeArtistSearch = (value) => typeof value === "string"
+  ? value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim().toLowerCase()
+  : "";
+
+const findTrackInterpreterMatch = (track, searchTerm, recordArtist, knownArtists) => {
   if (typeof track !== "string" || typeof searchTerm !== "string") return null;
-  const term = searchTerm.toLowerCase().trim();
+  const term = normalizeArtistSearch(searchTerm);
   if (!term) return null;
 
-  const scoreSide = (value) => {
-    const normalized = value.replace(/\s+/g, " ").trim().toLowerCase();
-    if (!normalized || !normalized.includes(term)) return 0;
+  const scoreSide = (value, allowPartial) => {
+    const normalized = normalizeArtistSearch(value);
+    const wordMatch = normalized.split(/\s+/).some(word => word.startsWith(term));
+    if (!normalized || !(allowPartial ? normalized.includes(term) : wordMatch)) return 0;
     if (normalized === term) return 3000;
     if (normalized.startsWith(term)) return 2000 + term.length / normalized.length;
     return 1000 + term.length / normalized.length;
   };
 
-  let bestMatch = null;
+  const candidates = [];
   for (const match of track.matchAll(/[-–—]/g)) {
     const separatorIndex = match.index;
     const left = track.slice(0, separatorIndex).replace(/\s+/g, " ").trim();
     const right = track.slice(separatorIndex + match[0].length).replace(/\s+/g, " ").trim();
     if (!left || !right) continue;
+    candidates.push([left, right]);
+  }
 
-    for (const side of [left, right]) {
-      const score = scoreSide(side);
-      if (score && (!bestMatch || score > bestMatch.score)) {
-        bestMatch = { interpreter: side, score };
-      }
+  const normalizedRecordArtist = normalizeArtistSearch(recordArtist);
+  const recognizedArtists = candidates.flat().filter(side => {
+    const normalized = normalizeArtistSearch(side);
+    return normalized === normalizedRecordArtist || knownArtists?.has(normalized);
+  });
+  const likelyArtists = candidates.flatMap(([left, right]) => {
+    const artistWord = /\b(band|banda|orchestra|orquestra|group|grupo|gang|trio|quartet|quarteto|singers)\b/i;
+    const leftHasArtistWord = artistWord.test(left);
+    const rightHasArtistWord = artistWord.test(right);
+    if (leftHasArtistWord !== rightHasArtistWord) return [leftHasArtistWord ? left : right];
+    const leftWords = left.split(/\s+/).length;
+    const rightWords = right.split(/\s+/).length;
+    if (leftWords !== rightWords) return [leftWords < rightWords ? left : right];
+    return [left, right];
+  });
+  const sidesToCheck = recognizedArtists.length > 0 ? recognizedArtists : [...new Set(likelyArtists)];
+  const allowPartial = recognizedArtists.length > 0;
+
+  let bestMatch = null;
+  for (const side of sidesToCheck) {
+    const score = scoreSide(side, allowPartial);
+    if (score && (!bestMatch || score > bestMatch.score)) {
+      bestMatch = { interpreter: side, score };
     }
   }
   return bestMatch;
@@ -384,7 +409,7 @@ const WashBadge = ({ washed, washedDate }) => {
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 8, background: glow, border: `1px solid ${color}44`, borderRadius: 20, padding: "4px 12px 4px 8px" }}>
       <span style={{ width: 12, height: 12, borderRadius: "50%", background: color, boxShadow: `0 0 6px ${color}`, flexShrink: 0, display: "inline-block" }} />
-      <span style={{ fontSize: 13, color, fontFamily: "monospace" }}>{label}</span>
+      <span style={{ fontSize: 13, color: "#f0ece4", fontFamily: "monospace" }}>{label}</span>
     </span>
   );
 };
@@ -1045,6 +1070,9 @@ export default function App() {
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCategories(categories); }, [categories]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const knownArtists = useMemo(() => new Set(records
+    .map(record => normalizeArtistSearch(record?.artist))
+    .filter(Boolean)), [records]);
 
   const results = useMemo(() => {
     const q  = query.toLowerCase().trim();
@@ -1059,7 +1087,7 @@ export default function App() {
       if (filterCat && r.tipo !== filterCat) return false;
       if (fa) {
         const hasArtistMatch = artist.toLowerCase().includes(fa) ||
-          tracks.some(t => findTrackInterpreterMatch(t, fa));
+          tracks.some(t => findTrackInterpreterMatch(t, fa, artist, knownArtists));
         if (!hasArtistMatch) return false;
       }
       if (ft) {
@@ -1101,13 +1129,13 @@ export default function App() {
       if (artistCmp !== 0) return artistCmp;
       return (a.album||"").localeCompare(b.album||"", "pt-BR", {sensitivity:"base"});
     });
-  }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy]);
+  }, [query, records, filterArtist, filterTrack, filterCat, categories, sortBy, knownArtists]);
 
   const matchedTracks = (r) => {
     const tracks = Array.isArray(r?.tracks) ? r.tracks : [];
     if (filterArtist.trim() && !filterTrack.trim() && !query.trim()) {
       const artistTerm = filterArtist.toLowerCase().trim();
-      return tracks.filter(t => findTrackInterpreterMatch(t, artistTerm));
+      return tracks.filter(t => findTrackInterpreterMatch(t, artistTerm, r?.artist, knownArtists));
     }
     const term = filterTrack || query;
     if (!term.trim()) return [];
@@ -1405,7 +1433,7 @@ export default function App() {
                         }
                         <div style={{ flex:1, minWidth:0 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                            <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.artist}</div>
+                            <div style={{ fontSize:14, color:"#c0392b", fontFamily:"monospace", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}><Hl text={r.artist}/></div>
                             {(()=>{ const cat = categories.find(c=>c.id===r.tipo); return cat ? <span style={{ fontSize:9, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"1px 5px", fontFamily:"monospace", flexShrink:0 }}>{cat.name.toUpperCase().slice(0,7)}</span> : <UncategorizedBadge compact />; })()}
                           </div>
                           <div style={{ fontSize:17, color:"#f0ece4", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.album}</div>
@@ -1447,7 +1475,7 @@ export default function App() {
         <div style={{ padding:18, maxWidth:680 }}>
           <div style={{ display:"flex", gap:10, marginBottom:20, alignItems:"center" }}>
             <button style={{ background:"#f0c030", border:"1px solid #f0c030", color:"#111", borderRadius:9, padding:"8px 16px", cursor:"pointer", fontSize:14, fontFamily:"monospace", fontWeight:"bold" }} onClick={returnToCatalog}>← VOLTAR</button>
-            <button style={{ background:"#c0392b22", border:"1px solid #c0392b66", color:"#ff8080", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
+            <button style={{ background:"#f0c03011", border:"1px solid #f0c03088", color:"#f0c030", borderRadius:9, padding:"8px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}>
               <Icon.Edit size={16} /> Editar disco
             </button>
@@ -1463,7 +1491,7 @@ export default function App() {
               <h2 style={{ margin:"0 0 6px", fontSize:24, fontWeight:"normal", lineHeight:1.2 }}>{selected.album}</h2>
               <div style={{ fontSize:14, color:"#999", fontFamily:"monospace", marginBottom:14 }}>{selected.year} · {selected.label} · {selected.genre}</div>
               <WashBadge washed={selected.washed} washedDate={selected.washedDate} />
-              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:14, background:"#c0392b14", color:"#e74c3c", border:"1px solid #c0392b33", borderRadius:9, padding:"4px 11px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={15} /> Tem riscos</span></div>}
+              {selected.scratches && <div style={{ marginTop:10 }}><span style={{ fontSize:14, background:"#c0392b14", color:"#ff8080", border:"1px solid #c0392b55", borderRadius:9, padding:"4px 11px", fontFamily:"monospace", display:"inline-flex", alignItems:"center", gap:6 }}><Icon.Warning size={15} /> Tem riscos</span></div>}
               <div style={{ marginTop:10, display:"flex", gap:8, flexWrap:"wrap" }}>
                 {(()=>{ const cat = categories.find(c=>c.id===selected.tipo); return cat ? <span style={{ fontSize:12, background:cat.color+"22", color:cat.color, border:`1px solid ${cat.color}44`, borderRadius:9, padding:"3px 10px", fontFamily:"monospace" }}>{cat.name}</span> : <UncategorizedBadge />; })()}
               </div>
@@ -1516,7 +1544,7 @@ export default function App() {
             </button>
             <button
               onClick={() => { setEditForm({ ...selected, tracks: selected.tracks.join("\n") }); setView("edit"); }}
-              style={{ background: "#c0392b22", border: "1px solid #c0392b66", color: "#ff8080", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
+              style={{ background: "#f0c03011", border: "1px solid #f0c03088", color: "#f0c030", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontFamily: "monospace", fontWeight: "bold", cursor: "pointer", flex: 1 }}>
               Editar Disco
             </button>
           </div>
