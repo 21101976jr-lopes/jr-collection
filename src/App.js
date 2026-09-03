@@ -1315,13 +1315,10 @@ export default function App() {
         input:focus,textarea:focus{border-color:#c0392b!important}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#080808}::-webkit-scrollbar-thumb{background:#1e1e1e;border-radius:3px}
         *{-webkit-tap-highlight-color:transparent}
-        .main-toolbar{display:grid;grid-template-columns:max-content max-content 1fr 36px 36px;gap:8px;align-items:center}
-        .catalog-button{grid-column:1;grid-row:1}.manual-button{grid-column:2;grid-row:1}
-        .share-catalog-button{grid-column:5;grid-row:1;width:36px;height:32px;padding:0;background:transparent;border:1px solid #f0c03066;color:#d4af6a;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-        .scan-button{grid-column:1 / 3;grid-row:2;justify-self:start}
-        .toolbar-count{grid-column:3;grid-row:2;justify-self:end;white-space:nowrap}
+        .main-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:relative}
+        .share-catalog-button{position:absolute;right:18px;top:10px;width:36px;height:32px;padding:0;background:transparent;border:1px solid #f0c03066;color:#d4af6a;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .toolbar-count{margin-left:auto;white-space:nowrap}
         .toolbar-square{width:36px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
-        .save-button{grid-column:4;grid-row:2}.folder-button{grid-column:5;grid-row:2}
       `}</style>
 
       {scanning && <ScanOverlay onClose={() => setScanning(false)} onDetected={handleScanDetected} />}
@@ -1370,7 +1367,6 @@ export default function App() {
       <div className="main-toolbar" style={{ padding:"10px 18px", borderBottom:"1px solid #141414", background:"#080808" }}>
         <button className="catalog-button" style={{ background: view==="catalog"&&!selected ? "#c0392b22" : "transparent", border: `1px solid ${view==="catalog"&&!selected ? "#c0392b66" : "#f0c03055"}`, color: view==="catalog"&&!selected ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
         <button className="manual-button" style={{ background: view==="add" ? "#c0392b22" : "transparent", border: `1px solid ${view==="add" ? "#c0392b66" : "#f0c03055"}`, color: view==="add" ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
-        <button className="share-catalog-button" type="button" onClick={() => { setShareResult(null); setShowShareDialog(true); }} aria-label="Compartilhar catálogo" title="Compartilhar catálogo"><Icon.Share size={16} /></button>
         <button className="scan-button" style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
         {view==="catalog"&&!selected&&<span className="toolbar-count" style={{ fontSize:12, fontFamily:"monospace", color:"#999" }}>{results.length} disco{results.length!==1?"s":""}</span>}
         <button className="toolbar-square save-button" style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, cursor:"pointer" }}
@@ -1406,6 +1402,7 @@ export default function App() {
             e.target.value = "";
           }} />
         </label>
+        <button className="share-catalog-button" type="button" onClick={() => { setShareResult(null); setShowShareDialog(true); }} aria-label="Compartilhar catálogo" title="Compartilhar catálogo"><Icon.Share size={16} /></button>
       </div>
 
       {view==="catalog" && !selected && (<>
