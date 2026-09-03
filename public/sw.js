@@ -1,4 +1,4 @@
-const CACHE = 'jr-collection-v11';
+const CACHE = 'jr-collection-v12';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -18,6 +18,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (new URL(e.request.url).pathname.startsWith('/compartilhar/')) return;
   e.respondWith(
     fetch(e.request, { cache: 'no-cache' }).catch(() => caches.match(e.request))
   );

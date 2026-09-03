@@ -62,6 +62,9 @@ const Icon = {
   Folder: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
   ),
+  Share: ({ size=16, color }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg>
+  ),
   Edit: ({ size=16, color }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color||"currentColor"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>
   ),
@@ -1036,6 +1039,9 @@ export default function App() {
   const [toast, setToast] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [showTopBtn, setShowTopBtn] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [generatingShare, setGeneratingShare] = useState(false);
+  const [shareResult, setShareResult] = useState(null);
   const catalogScrollRef = useRef(0);
   const restoreCatalogScrollRef = useRef(false);
 
@@ -1070,6 +1076,46 @@ export default function App() {
   useEffect(() => { saveRecords(records); }, [records]);
   useEffect(() => { saveCategories(categories); }, [categories]);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const copyShareLink = async (url, fallbackLabel = "Copiar link") => {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("Link copiado!");
+      return true;
+    } catch {
+      window.prompt(`${fallbackLabel}:`, url);
+      return false;
+    }
+  };
+  const generateShareLink = async () => {
+    if (generatingShare) return;
+    if (!coversLoaded) {
+      showToast("Aguarde as capas terminarem de carregar.");
+      return;
+    }
+    setGeneratingShare(true);
+    try {
+      const response = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          catalogName: process.env.REACT_APP_USER_NAME ? `${process.env.REACT_APP_USER_NAME} Collection` : "Jr Collection",
+          records: records.map(record => ({
+            category: record?.tipo || "", artist: record?.artist || "", album: record?.album || "",
+            year: record?.year || "", genre: record?.genre || "", coverPhoto: record?.coverPhoto || ""
+          }))
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.url) throw new Error(data.error || "Não foi possível gerar o link.");
+      const copied = await copyShareLink(data.url);
+      setShareResult({ ...data, copied });
+      showToast(copied ? "Link criado e copiado!" : "Link criado.");
+    } catch (error) {
+      showToast(error.message || "Não foi possível gerar o link.");
+    } finally {
+      setGeneratingShare(false);
+    }
+  };
   const knownArtists = useMemo(() => new Set(records
     .map(record => normalizeArtistSearch(record?.artist))
     .filter(Boolean)), [records]);
@@ -1269,10 +1315,40 @@ export default function App() {
         input:focus,textarea:focus{border-color:#c0392b!important}
         ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:#080808}::-webkit-scrollbar-thumb{background:#1e1e1e;border-radius:3px}
         *{-webkit-tap-highlight-color:transparent}
+        .main-toolbar{display:grid;grid-template-columns:max-content max-content 1fr 36px 36px;gap:8px;align-items:center}
+        .catalog-button{grid-column:1;grid-row:1}.manual-button{grid-column:2;grid-row:1}
+        .share-catalog-button{grid-column:5;grid-row:1;width:36px;height:32px;padding:0;background:transparent;border:1px solid #f0c03066;color:#d4af6a;border-radius:9px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+        .scan-button{grid-column:1 / 3;grid-row:2;justify-self:start}
+        .toolbar-count{grid-column:3;grid-row:2;justify-self:end;white-space:nowrap}
+        .toolbar-square{width:36px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+        .save-button{grid-column:4;grid-row:2}.folder-button{grid-column:5;grid-row:2}
       `}</style>
 
       {scanning && <ScanOverlay onClose={() => setScanning(false)} onDetected={handleScanDetected} />}
       {toast && <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#111", border:"1px solid #c0392b55", color:"#f0ece4", padding:"12px 24px", borderRadius:12, fontFamily:"monospace", fontSize:14, zIndex:500, whiteSpace:"nowrap", boxShadow:"0 4px 20px #000" }}>{toast}</div>}
+      {showShareDialog && (
+        <div role="presentation" onMouseDown={e => { if (e.target === e.currentTarget && !generatingShare) { setShowShareDialog(false); setShareResult(null); } }} style={{ position:"fixed", inset:0, zIndex:600, background:"#000b", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="share-dialog-title" style={{ width:"min(420px,100%)", background:"#111", border:"1px solid #f0c03066", borderRadius:14, padding:22, boxShadow:"0 18px 60px #000" }}>
+            <h2 id="share-dialog-title" style={{ margin:"0 0 12px", color:"#f0ece4", fontSize:22, fontWeight:"normal" }}>Compartilhar Catálogo</h2>
+            {!shareResult ? <>
+              <p style={{ margin:"0 0 22px", color:"#bbb", fontFamily:"monospace", fontSize:14, lineHeight:1.6 }}>Deseja gerar uma página temporária da sua coleção? Ela será somente para visualização e ficará disponível por 72 horas.</p>
+              <div style={{ display:"flex", justifyContent:"flex-end", gap:10 }}>
+                <button type="button" disabled={generatingShare} onClick={() => setShowShareDialog(false)} style={{ background:"transparent", border:"1px solid #555", color:"#ccc", borderRadius:9, padding:"9px 16px", cursor:generatingShare?"default":"pointer", fontFamily:"monospace", opacity:generatingShare?.55:1 }}>Não</button>
+                <button type="button" disabled={generatingShare} onClick={generateShareLink} style={{ background:"#c0392b22", border:"1px solid #c0392b88", color:"#ff8080", borderRadius:9, padding:"9px 16px", cursor:generatingShare?"wait":"pointer", fontFamily:"monospace", minWidth:142 }}>{generatingShare ? "Gerando link..." : "Sim, gerar link"}</button>
+              </div>
+            </> : <>
+              <p style={{ color:"#9fd5a6", fontFamily:"monospace", fontSize:14, lineHeight:1.5 }}>{shareResult.copied ? "Link criado e copiado!" : "Link criado!"} Ele ficará disponível por 72 horas.</p>
+              <input readOnly value={shareResult.url} onFocus={e => e.target.select()} aria-label="Link compartilhável" style={{ width:"100%", boxSizing:"border-box", background:"#080808", border:"1px solid #333", borderRadius:8, padding:"10px 12px", color:"#ddd", fontFamily:"monospace", fontSize:12 }} />
+              <p style={{ color:"#999", fontFamily:"monospace", fontSize:12, lineHeight:1.5 }}>Expira em {new Date(shareResult.expiresAt).toLocaleString("pt-BR")}</p>
+              <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"flex-end", gap:10 }}>
+                <button type="button" onClick={() => copyShareLink(shareResult.url, "Copiar link")} style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"9px 14px", cursor:"pointer", fontFamily:"monospace" }}>{shareResult.copied ? "Copiar novamente" : "Copiar link"}</button>
+                {navigator.share && <button type="button" onClick={() => navigator.share({ title:"Jr Collection", url:shareResult.url }).catch(() => {})} style={{ background:"#c0392b22", border:"1px solid #c0392b88", color:"#ff8080", borderRadius:9, padding:"9px 14px", cursor:"pointer", fontFamily:"monospace" }}>Compartilhar</button>}
+                <button type="button" onClick={() => { setShowShareDialog(false); setShareResult(null); }} style={{ background:"transparent", border:"1px solid #555", color:"#ccc", borderRadius:9, padding:"9px 14px", cursor:"pointer", fontFamily:"monospace" }}>Fechar</button>
+              </div>
+            </>}
+          </div>
+        </div>
+      )}
 
       <div style={{ background:"linear-gradient(180deg,#130707 0%,#0a0a0a 100%)", borderBottom:"1px solid #1a1a1a", padding:"18px 18px 14px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:14 }}>
@@ -1291,16 +1367,17 @@ export default function App() {
         )}
       </div>
 
-      <div style={{ display:"flex", gap:8, padding:"10px 18px", borderBottom:"1px solid #141414", flexWrap:"wrap", alignItems:"center", background:"#080808" }}>
-        <button style={{ background: view==="catalog"&&!selected ? "#c0392b22" : "transparent", border: `1px solid ${view==="catalog"&&!selected ? "#c0392b66" : "#f0c03055"}`, color: view==="catalog"&&!selected ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
-        <button style={{ background: view==="add" ? "#c0392b22" : "transparent", border: `1px solid ${view==="add" ? "#c0392b66" : "#f0c03055"}`, color: view==="add" ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
-        <button style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
-        {view==="catalog"&&!selected&&<span style={{ marginLeft:"auto", fontSize:12, fontFamily:"monospace", color:"#999" }}>{results.length} disco{results.length!==1?"s":""}</span>}
-        <button style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", marginLeft: view==="catalog"&&!selected?"4px":"auto" }}
+      <div className="main-toolbar" style={{ padding:"10px 18px", borderBottom:"1px solid #141414", background:"#080808" }}>
+        <button className="catalog-button" style={{ background: view==="catalog"&&!selected ? "#c0392b22" : "transparent", border: `1px solid ${view==="catalog"&&!selected ? "#c0392b66" : "#f0c03055"}`, color: view==="catalog"&&!selected ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setView("catalog"); setSelected(null); }}><Icon.Grid size={16} /> CATÁLOGO</button>
+        <button className="manual-button" style={{ background: view==="add" ? "#c0392b22" : "transparent", border: `1px solid ${view==="add" ? "#c0392b66" : "#f0c03055"}`, color: view==="add" ? "#ff8080" : "#d4af6a", borderRadius: 9, padding: "7px 18px", cursor: "pointer", fontSize: 14, fontFamily: "monospace", letterSpacing: 1, display:"flex", alignItems:"center", gap:7 }} onClick={() => { setEditForm(null); setView("add"); }}><Icon.Plus size={16} /> MANUAL</button>
+        <button className="share-catalog-button" type="button" onClick={() => { setShareResult(null); setShowShareDialog(true); }} aria-label="Compartilhar catálogo" title="Compartilhar catálogo"><Icon.Share size={16} /></button>
+        <button className="scan-button" style={{ background:"#4a4a4a", border:"1px solid #f0c03066", color:"#f0f0f0", borderRadius:9, padding:"7px 18px", cursor:"pointer", fontSize:14, fontFamily:"monospace", letterSpacing:1, display:"flex", alignItems:"center", gap:6 }} onClick={() => setScanning(true)}><Icon.Camera size={16} /> ESCANEAR</button>
+        {view==="catalog"&&!selected&&<span className="toolbar-count" style={{ fontSize:12, fontFamily:"monospace", color:"#999" }}>{results.length} disco{results.length!==1?"s":""}</span>}
+        <button className="toolbar-square save-button" style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, cursor:"pointer" }}
           onClick={() => exportCatalog(records)} title="Exportar backup">
           <Icon.Save size={16} />
         </button>
-        <label style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, padding:"6px 12px", cursor:"pointer", fontSize:12, fontFamily:"monospace", display:"flex", alignItems:"center" }} title="Importar backup">
+        <label className="toolbar-square folder-button" style={{ background:"transparent", border:"1px solid #f0c03066", color:"#d4af6a", borderRadius:9, cursor:"pointer" }} title="Importar backup">
           <Icon.Folder size={16} />
           <input type="file" accept=".json" style={{ display:"none" }} onChange={async e => {
             const file = e.target.files[0]; if (!file) return;
