@@ -23,7 +23,7 @@ const redis = async command => {
 };
 
 const text = (value, max) => String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, "").slice(0, max);
-const escapeHtml = value => text(value, 5000).replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
 const safeCover = value => {
   const cover = String(value || "");
   return /^(data:image\/(?:jpeg|png|webp);base64,|https:\/\/)/i.test(cover) ? cover : "";
